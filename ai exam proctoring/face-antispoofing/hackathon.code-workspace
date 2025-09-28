@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"name": "hackathon",
+			"path": "../../../../.."
+		},
+		{
+			"name": "device detection",
+			"path": "../../../../../../proct/device detection"
+		}
+	],
+	"settings": {}
+}
