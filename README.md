@@ -1,3 +1,0 @@
-# GazeGuard - Coming Soon...
-
- AI-powered proctoring system combining real-time retina tracking
