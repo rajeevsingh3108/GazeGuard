@@ -66,6 +66,18 @@ def create_tables():
         )
     ''')
     
+    # Proctoring logs table
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS proctoring_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            test_code TEXT NOT NULL,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            head_orientation TEXT NOT NULL,
+            sentiment TEXT NOT NULL
+        )
+    ''')
+    
     conn.commit()
     conn.close()
 
@@ -130,22 +142,49 @@ def face_orientation():
     if 'frame' not in request.files:
         return jsonify({"error": "No frame provided"}), 400
 
+    username = request.form.get('username')
+    test_code = request.form.get('testCode')
+
     # Get the frame (image) from the request
     frame_file = request.files['frame']
-    frame = np.array(Image.open(io.BytesIO(frame_file.read())))
+    img_rgb = np.array(Image.open(io.BytesIO(frame_file.read())))
+    frame_bgr = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
 
     # Convert the image to grayscale
-    gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    gray_frame = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
 
     # Detect faces in the image
     faces = face_cascade.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=5)
 
     orientation_status = "No face Detected"
+    sentiment = "Unknown"
+    
     if len(faces) > 0:
         for face_rect in faces:
-            orientation_status = analyze_head_orientation(face_rect, frame.shape)
+            orientation_status = analyze_head_orientation(face_rect, frame_bgr.shape)
+            
+        try:
+            from deepface import DeepFace
+            # Analyze sentiment on the BGR frame
+            result = DeepFace.analyze(frame_bgr, actions=['emotion'], enforce_detection=False)
+            if isinstance(result, list):
+                sentiment = result[0]['dominant_emotion']
+            else:
+                sentiment = result['dominant_emotion']
+        except Exception as e:
+            print("Error analyzing sentiment:", e)
 
-    return jsonify({"status": orientation_status})
+    # Save to database if username and test_code are provided
+    if username and test_code:
+        conn = get_db_connection()
+        conn.execute('''
+            INSERT INTO proctoring_logs (username, test_code, head_orientation, sentiment)
+            VALUES (?, ?, ?, ?)
+        ''', (username, test_code, orientation_status, sentiment))
+        conn.commit()
+        conn.close()
+
+    return jsonify({"status": orientation_status, "sentiment": sentiment})
 
 
 @app.route('/get-all-tests', methods=['GET'])
@@ -242,6 +281,34 @@ def get_test_data(test_code):
         return jsonify(test_data)
     else:
         return jsonify({'error': 'Test not found'}), 404
+
+
+@app.route('/get-proctoring-logs', methods=['GET'])
+def get_proctoring_logs():
+    test_code = request.args.get('testCode')
+    if not test_code:
+        return jsonify({"error": "No testCode provided"}), 400
+
+    conn = get_db_connection()
+    logs_query = '''
+        SELECT username, timestamp, head_orientation, sentiment
+        FROM proctoring_logs
+        WHERE test_code = ?
+        ORDER BY timestamp DESC
+    '''
+    logs = conn.execute(logs_query, (test_code,)).fetchall()
+    conn.close()
+
+    logs_data = []
+    for log in logs:
+        logs_data.append({
+            'username': log['username'],
+            'timestamp': log['timestamp'],
+            'head_orientation': log['head_orientation'],
+            'sentiment': log['sentiment']
+        })
+
+    return jsonify(logs_data), 200
 
 
 @app.route('/admin', methods=['GET'])

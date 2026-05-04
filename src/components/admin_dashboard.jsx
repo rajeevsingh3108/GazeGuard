@@ -9,6 +9,9 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [tests, setTests] = useState([]);
   const [userDetails, setUserDetails] = useState([]);
+  const [proctoringLogs, setProctoringLogs] = useState([]);
+  const [logsModalVisible, setLogsModalVisible] = useState(false);
+  const [selectedTestLogs, setSelectedTestLogs] = useState('');
 
   useEffect(() => {
     fetchTests();
@@ -59,6 +62,19 @@ const Dashboard = () => {
         fetchTests();
       })
       .catch(err => console.error("Error resetting test", err));
+  };
+
+  const handleViewLogs = (testCode) => {
+    axios.get(`http://localhost:5000/get-proctoring-logs?testCode=${testCode}`)
+      .then(res => {
+        setProctoringLogs(res.data);
+        setSelectedTestLogs(testCode);
+        setLogsModalVisible(true);
+      })
+      .catch(err => {
+        console.error("Error fetching logs", err);
+        alert("Error fetching logs for test " + testCode);
+      });
   };
 
   return (
@@ -120,6 +136,13 @@ const Dashboard = () => {
                         Reset Test
                       </button>
 
+                      <button
+                        onClick={() => handleViewLogs(test.test_code)}
+                        className="bg-indigo-600 text-white px-6 py-2 rounded-lg shadow hover:bg-indigo-700 font-Orbitron"
+                      >
+                        View Logs
+                      </button>
+
                     </td>
                   </tr>
                 ))}
@@ -167,6 +190,61 @@ const Dashboard = () => {
 
       {/* FLOATING NAVBAR */}
       <Navbar />
+
+      {/* LOGS MODAL */}
+      {logsModalVisible && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[80vh] flex flex-col">
+            <div className="flex justify-between items-center p-6 border-b">
+              <h3 className="text-2xl font-Orbitron font-bold text-gray-800">
+                Proctoring Logs - {selectedTestLogs}
+              </h3>
+              <button
+                onClick={() => setLogsModalVisible(false)}
+                className="text-gray-500 hover:text-red-500 transition text-3xl font-bold"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-grow">
+              {proctoringLogs.length > 0 ? (
+                <table className="w-full border border-gray-300 rounded-xl overflow-hidden shadow-sm">
+                  <thead className="bg-slate-800 text-white">
+                    <tr>
+                      <th className="p-3 text-left">Username</th>
+                      <th className="p-3 text-left">Timestamp</th>
+                      <th className="p-3 text-left">Head Orientation</th>
+                      <th className="p-3 text-left">Sentiment</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {proctoringLogs.map((log, i) => (
+                      <tr key={i} className="border-b hover:bg-slate-50 transition">
+                        <td className="p-3 text-gray-700">{log.username}</td>
+                        <td className="p-3 text-gray-500 text-sm">{log.timestamp}</td>
+                        <td className="p-3">
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold ${log.head_orientation === 'Facing Camera' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                            {log.head_orientation}
+                          </span>
+                        </td>
+                        <td className="p-3">
+                          <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold capitalize">
+                            {log.sentiment}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="text-center py-10 text-gray-500 text-lg">
+                  No logs available for this test.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

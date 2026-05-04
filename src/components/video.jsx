@@ -2,8 +2,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 
-function FaceOrientationChecker() {
+function FaceOrientationChecker({ username, testCode }) {
   const [status, setStatus] = useState('Unknown');
+  const [sentiment, setSentiment] = useState('Unknown');
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
@@ -28,9 +29,14 @@ function FaceOrientationChecker() {
       canvas.toBlob(blob => {
         const formData = new FormData();
         formData.append('frame', blob, 'frame.jpg');
+        if (username) formData.append('username', username);
+        if (testCode) formData.append('testCode', testCode);
 
         axios.post('http://localhost:5000/face-orientation', formData)
-          .then(response => setStatus(response.data.status))
+          .then(response => {
+            setStatus(response.data.status);
+            if (response.data.sentiment) setSentiment(response.data.sentiment);
+          })
           .catch(error => console.error('Error sending frame:', error));
       }, 'image/jpeg');
     };
@@ -68,10 +74,16 @@ function FaceOrientationChecker() {
       <canvas ref={canvasRef} style={{ display: 'none' }} />
 
       {/* 🔹 Status Text */}
-      <p className="text-lg font-Lex font-semibold 
-                 text-gray-700 bg-gray-100 px-4 py-2 rounded-lg shadow-sm">
-        {status}
-      </p>
+      <div className="flex flex-col items-center space-y-2 w-full">
+        <p className="text-lg font-Lex font-semibold 
+                   text-gray-700 bg-gray-100 px-4 py-2 rounded-lg shadow-sm w-full text-center">
+          {status}
+        </p>
+        <p className="text-lg font-Lex font-semibold 
+                   text-white bg-indigo-500 px-4 py-2 rounded-lg shadow-sm w-full text-center capitalize">
+          Sentiment: {sentiment}
+        </p>
+      </div>
 
       {/* 🔹 Warning Message */}
       {status === 'Face Turned Away' && (

@@ -1461,7 +1461,7 @@ const McqTest = () => {
 
               <div className="bg-black p-3 rounded-xl shadow border">
                 <div className="w-full h-[340px] rounded overflow-hidden">
-                  <FaceOrientationChecker />
+                  <FaceOrientationChecker username={username} testCode={testCode} />
                 </div>
               </div>
 
