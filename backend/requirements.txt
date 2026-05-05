@@ -4,3 +4,6 @@ bcrypt
 opencv-python
 numpy
 Pillow
+deepface
+tensorflow
+cvlib

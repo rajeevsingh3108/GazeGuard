@@ -77,7 +77,17 @@ def create_tables():
             sentiment TEXT NOT NULL
         )
     ''')
-    
+    # Warnings table
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS warnings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            test_code TEXT NOT NULL,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            warning_type TEXT NOT NULL
+        )
+    ''')
+
     conn.commit()
     conn.close()
 
@@ -156,10 +166,13 @@ def face_orientation():
     # Detect faces in the image
     faces = face_cascade.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=5)
 
-    orientation_status = "No face Detected"
+    orientation_status = "No Face Detected"
     sentiment = "Unknown"
+    warning = None
     
-    if len(faces) > 0:
+    if len(faces) == 0:
+        warning = "No Face Detected"
+    elif len(faces) > 0:
         for face_rect in faces:
             orientation_status = analyze_head_orientation(face_rect, frame_bgr.shape)
             
@@ -173,6 +186,15 @@ def face_orientation():
                 sentiment = result['dominant_emotion']
         except Exception as e:
             print("Error analyzing sentiment:", e)
+            
+        # Object detection for phones/gadgets
+        try:
+            import cvlib as cv
+            bbox, label, conf = cv.detect_common_objects(frame_bgr, model="yolov3-tiny")
+            if 'cell phone' in label or 'laptop' in label or 'remote' in label:
+                warning = "Device Detected (Phone/Gadget)"
+        except Exception as e:
+            print("Error detecting objects:", e)
 
     # Save to database if username and test_code are provided
     if username and test_code:
@@ -181,10 +203,17 @@ def face_orientation():
             INSERT INTO proctoring_logs (username, test_code, head_orientation, sentiment)
             VALUES (?, ?, ?, ?)
         ''', (username, test_code, orientation_status, sentiment))
+        
+        if warning:
+            conn.execute('''
+                INSERT INTO warnings (username, test_code, warning_type)
+                VALUES (?, ?, ?)
+            ''', (username, test_code, warning))
+            
         conn.commit()
         conn.close()
 
-    return jsonify({"status": orientation_status, "sentiment": sentiment})
+    return jsonify({"status": orientation_status, "sentiment": sentiment, "warning": warning})
 
 
 @app.route('/get-all-tests', methods=['GET'])
@@ -310,6 +339,33 @@ def get_proctoring_logs():
 
     return jsonify(logs_data), 200
 
+@app.route('/get-warnings', methods=['GET'])
+def get_warnings():
+    test_code = request.args.get('testCode')
+    if not test_code:
+        return jsonify({"error": "No testCode provided"}), 400
+
+    conn = get_db_connection()
+    logs_query = '''
+        SELECT username, timestamp, warning_type
+        FROM warnings
+        WHERE test_code = ?
+        ORDER BY timestamp DESC
+    '''
+    logs = conn.execute(logs_query, (test_code,)).fetchall()
+    conn.close()
+
+    logs_data = []
+    for log in logs:
+        logs_data.append({
+            'username': log['username'],
+            'timestamp': log['timestamp'],
+            'warning_type': log['warning_type']
+        })
+
+    return jsonify(logs_data), 200
+
+
 
 @app.route('/admin', methods=['GET'])
 def admin_dashboard():
@@ -320,12 +376,15 @@ def admin_dashboard():
 def user_dashboard():
     return jsonify({"message": "Welcome to the User Dashboard!"})
 
+import base64
+
 @app.route('/register', methods=['POST'])
 def register():
     data = request.get_json()
     username = data.get('username')
     password = data.get('password')
     role = data.get('role', 'user')  # Default role is 'user'
+    face_image = data.get('face_image')
 
     conn = get_db_connection()
 
@@ -345,10 +404,66 @@ def register():
     # Insert the new user into the database
     conn.execute('INSERT INTO users (username, password, salt, role) VALUES (?, ?, ?, ?)',
                  (username, hashed_password, salt, role))
+                 
+    if role == 'user' and face_image:
+        try:
+            # face_image is "data:image/jpeg;base64,..."
+            header, encoded = face_image.split(",", 1)
+            image_data = base64.b64decode(encoded)
+            conn.execute('INSERT INTO user_faces (username, face_image) VALUES (?, ?)', (username, image_data))
+        except Exception as e:
+            print("Error saving face image:", e)
+
     conn.commit()
     conn.close()
 
     return jsonify({"message": "User registered successfully."}), 201
+
+@app.route('/verify-face', methods=['POST'])
+def verify_face():
+    if 'frame' not in request.files:
+        return jsonify({"error": "No frame provided"}), 400
+
+    username = request.form.get('username')
+    test_code = request.form.get('testCode')
+    
+    conn = get_db_connection()
+    user_face_row = conn.execute('SELECT face_image FROM user_faces WHERE username = ?', (username,)).fetchone()
+    conn.close()
+    
+    if not user_face_row:
+        return jsonify({"verified": False, "error": "No face registered for this user"}), 400
+        
+    stored_image_data = user_face_row['face_image']
+    
+    # Save the frame to check
+    frame_file = request.files['frame']
+    frame_rgb = np.array(Image.open(io.BytesIO(frame_file.read())))
+    frame_bgr = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
+    
+    stored_rgb = np.array(Image.open(io.BytesIO(stored_image_data)))
+    stored_bgr = cv2.cvtColor(stored_rgb, cv2.COLOR_RGB2BGR)
+    
+    try:
+        from deepface import DeepFace
+        # Verify
+        result = DeepFace.verify(frame_bgr, stored_bgr, enforce_detection=False)
+        is_verified = result["verified"]
+        
+        # Log mismatch warning
+        if not is_verified and username and test_code:
+            conn = get_db_connection()
+            conn.execute('''
+                INSERT INTO warnings (username, test_code, warning_type)
+                VALUES (?, ?, ?)
+            ''', (username, test_code, "Face Verification Mismatch"))
+            conn.commit()
+            conn.close()
+            
+        return jsonify({"verified": is_verified, "warning": "Face Verification Mismatch" if not is_verified else None})
+    except Exception as e:
+        print("Error in verify-face:", e)
+        return jsonify({"verified": False, "error": str(e)}), 500
 
 # Create a test
 @app.route('/create-test', methods=['POST'])

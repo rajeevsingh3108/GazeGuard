@@ -10,6 +10,7 @@ const Dashboard = () => {
   const [tests, setTests] = useState([]);
   const [userDetails, setUserDetails] = useState([]);
   const [proctoringLogs, setProctoringLogs] = useState([]);
+  const [warningsLogs, setWarningsLogs] = useState([]);
   const [logsModalVisible, setLogsModalVisible] = useState(false);
   const [selectedTestLogs, setSelectedTestLogs] = useState('');
 
@@ -65,15 +66,19 @@ const Dashboard = () => {
   };
 
   const handleViewLogs = (testCode) => {
-    axios.get(`http://localhost:5000/get-proctoring-logs?testCode=${testCode}`)
-      .then(res => {
-        setProctoringLogs(res.data);
+    Promise.all([
+      axios.get(`http://localhost:5000/get-proctoring-logs?testCode=${testCode}`),
+      axios.get(`http://localhost:5000/get-warnings?testCode=${testCode}`)
+    ])
+      .then(([logsRes, warningsRes]) => {
+        setProctoringLogs(logsRes.data);
+        setWarningsLogs(warningsRes.data);
         setSelectedTestLogs(testCode);
         setLogsModalVisible(true);
       })
       .catch(err => {
-        console.error("Error fetching logs", err);
-        alert("Error fetching logs for test " + testCode);
+        console.error("Error fetching logs or warnings", err);
+        alert("Error fetching logs/warnings for test " + testCode);
       });
   };
 
@@ -208,37 +213,72 @@ const Dashboard = () => {
             </div>
             <div className="p-6 overflow-y-auto flex-grow">
               {proctoringLogs.length > 0 ? (
-                <table className="w-full border border-gray-300 rounded-xl overflow-hidden shadow-sm">
-                  <thead className="bg-slate-800 text-white">
-                    <tr>
-                      <th className="p-3 text-left">Username</th>
-                      <th className="p-3 text-left">Timestamp</th>
-                      <th className="p-3 text-left">Head Orientation</th>
-                      <th className="p-3 text-left">Sentiment</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {proctoringLogs.map((log, i) => (
-                      <tr key={i} className="border-b hover:bg-slate-50 transition">
-                        <td className="p-3 text-gray-700">{log.username}</td>
-                        <td className="p-3 text-gray-500 text-sm">{log.timestamp}</td>
-                        <td className="p-3">
-                          <span className={`px-3 py-1 rounded-full text-xs font-bold ${log.head_orientation === 'Facing Camera' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                            {log.head_orientation}
-                          </span>
-                        </td>
-                        <td className="p-3">
-                          <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold capitalize">
-                            {log.sentiment}
-                          </span>
-                        </td>
+                <div className="mb-8">
+                  <h4 className="text-xl font-semibold mb-3">General Logs</h4>
+                  <table className="w-full border border-gray-300 rounded-xl overflow-hidden shadow-sm">
+                    <thead className="bg-slate-800 text-white">
+                      <tr>
+                        <th className="p-3 text-left">Username</th>
+                        <th className="p-3 text-left">Timestamp</th>
+                        <th className="p-3 text-left">Head Orientation</th>
+                        <th className="p-3 text-left">Sentiment</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {proctoringLogs.map((log, i) => (
+                        <tr key={i} className="border-b hover:bg-slate-50 transition">
+                          <td className="p-3 text-gray-700">{log.username}</td>
+                          <td className="p-3 text-gray-500 text-sm">{log.timestamp}</td>
+                          <td className="p-3">
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${log.head_orientation === 'Facing Camera' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                              {log.head_orientation}
+                            </span>
+                          </td>
+                          <td className="p-3">
+                            <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold capitalize">
+                              {log.sentiment}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               ) : (
-                <div className="text-center py-10 text-gray-500 text-lg">
-                  No logs available for this test.
+                <div className="text-center py-5 text-gray-500 text-lg">
+                  No general logs available for this test.
+                </div>
+              )}
+
+              {warningsLogs.length > 0 ? (
+                <div>
+                  <h4 className="text-xl font-semibold text-red-600 mb-3">Warnings</h4>
+                  <table className="w-full border border-red-300 rounded-xl overflow-hidden shadow-sm">
+                    <thead className="bg-red-600 text-white">
+                      <tr>
+                        <th className="p-3 text-left">Username</th>
+                        <th className="p-3 text-left">Timestamp</th>
+                        <th className="p-3 text-left">Warning Type</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {warningsLogs.map((log, i) => (
+                        <tr key={i} className="border-b hover:bg-red-50 transition">
+                          <td className="p-3 text-gray-800 font-medium">{log.username}</td>
+                          <td className="p-3 text-gray-600 text-sm">{log.timestamp}</td>
+                          <td className="p-3">
+                            <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-200 text-red-800">
+                              {log.warning_type}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-5 text-gray-500 text-lg">
+                  No warnings logged for this test.
                 </div>
               )}
             </div>
