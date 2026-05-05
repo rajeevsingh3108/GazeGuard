@@ -14,8 +14,7 @@ app = Flask(__name__ )
 CORS(app)  # Enable CORS
 print(cv2.__version__)
 # Load the Haar cascade for face detection
-# Specify the path to the Haar cascade manually
-HAAR_CASCADE_PATH = 'haarcascade_frontalface_default.xml'  # Update this path
+HAAR_CASCADE_PATH = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
 face_cascade = cv2.CascadeClassifier(HAAR_CASCADE_PATH)
 
 # Define threshold for head turn detection
@@ -62,6 +61,8 @@ def create_tables():
             answers TEXT NOT NULL,
             ip_address TEXT NOT NULL,
             session_login TEXT NOT NULL,
+            score INTEGER,
+            total INTEGER,
             FOREIGN KEY (test_id) REFERENCES tests (id)
         )
     ''')
@@ -85,6 +86,15 @@ def create_tables():
             test_code TEXT NOT NULL,
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
             warning_type TEXT NOT NULL
+        )
+    ''')
+
+    # User Faces table
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS user_faces (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            face_image BLOB NOT NULL
         )
     ''')
 
@@ -164,7 +174,7 @@ def face_orientation():
     gray_frame = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
 
     # Detect faces in the image
-    faces = face_cascade.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=5)
+    faces = face_cascade.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=4, minSize=(30, 30))
 
     orientation_status = "No Face Detected"
     sentiment = "Unknown"
@@ -273,16 +283,29 @@ def submit_test():
 
     conn = get_db_connection()
     
+    # Fetch test questions to calculate score
+    test = conn.execute('SELECT questions FROM tests WHERE test_code = ?', (test_id,)).fetchone()
+    score = 0
+    total = 0
+    if test:
+        questions = json.loads(test['questions'])
+        total = len(questions)
+        for q in questions:
+            q_text = q.get('question')
+            correct_ans = q.get('correctAnswer')
+            if correct_ans and answers.get(q_text) == correct_ans:
+                score += 1
+
     # Insert data into the user_test_sessions table
     conn.execute('''
-        INSERT INTO user_test_sessions (username, test_id, answers, ip_address, session_login)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (username, test_id, json.dumps(answers), ip_address, session_login))
+        INSERT INTO user_test_sessions (username, test_id, answers, ip_address, session_login, score, total)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (username, test_id, json.dumps(answers), ip_address, session_login, score, total))
     
     conn.commit()
     conn.close()
     
-    return jsonify({"message": "Test submitted successfully."}), 201
+    return jsonify({"message": "Test submitted successfully.", "score": score, "total": total}), 201
 
 @app.route('/get-test-data/<test_code>', methods=['GET'])
 def get_test_data(test_code):
@@ -488,13 +511,71 @@ def create_test():
 
     return jsonify({"message": "Test created successfully."}), 201
 
+@app.route('/get-user-test-details', methods=['GET'])
+def get_user_test_details():
+    username = request.args.get('username')
+    test_code = request.args.get('testCode')
+
+    if not username or not test_code:
+        return jsonify({"error": "Missing parameters"}), 400
+
+    conn = get_db_connection()
+    
+    # Get test session details
+    session = conn.execute('''
+        SELECT answers, score, total 
+        FROM user_test_sessions 
+        WHERE username = ? AND test_id = ?
+    ''', (username, test_code)).fetchone()
+
+    # Get proctoring logs
+    logs = conn.execute('''
+        SELECT timestamp, head_orientation, sentiment 
+        FROM proctoring_logs 
+        WHERE username = ? AND test_code = ?
+        ORDER BY timestamp DESC
+    ''', (username, test_code)).fetchall()
+
+    # Get warnings
+    warnings = conn.execute('''
+        SELECT timestamp, warning_type 
+        FROM warnings 
+        WHERE username = ? AND test_code = ?
+        ORDER BY timestamp DESC
+    ''', (username, test_code)).fetchall()
+
+    conn.close()
+
+    if not session:
+        return jsonify({"error": "Session not found"}), 404
+
+    try:
+        answers = json.loads(session['answers']) if session['answers'] else {}
+    except:
+        answers = {}
+        
+    attempted = len(answers.keys())
+    score = session['score'] if session['score'] is not None else 0
+    total = session['total'] if session['total'] is not None else 0
+    incorrect = attempted - score
+
+    return jsonify({
+        "score": score,
+        "total": total,
+        "attempted": attempted,
+        "incorrect": incorrect,
+        "answers": answers,
+        "logs": [dict(log) for log in logs],
+        "warnings": [dict(w) for w in warnings]
+    }), 200
+
 @app.route('/get-user-sessions', methods=['GET'])
 def get_user_sessions():
     conn = get_db_connection()
     
-    # Fetch username, ip_address, and session_login from user_test_sessions
+    # Fetch data from user_test_sessions
     sessions_query = '''
-        SELECT username, ip_address, session_login
+        SELECT username, test_id, ip_address, session_login, score, total
         FROM user_test_sessions
     '''
     sessions = conn.execute(sessions_query).fetchall()
@@ -505,8 +586,11 @@ def get_user_sessions():
     for session in sessions:
         sessions_data.append({
             'username': session['username'],
+            'test_id': session['test_id'],
             'ip_address': session['ip_address'],
-            'session_login': session['session_login']
+            'session_login': session['session_login'],
+            'score': session['score'],
+            'total': session['total']
         })
     
     # Return the data as a JSON response
