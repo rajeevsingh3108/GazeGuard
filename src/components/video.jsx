@@ -85,7 +85,19 @@ function FaceOrientationChecker({ username, testCode }) {
             setStatus(s || 'Unknown');
             if (sent) setSentiment(sent);
             // Only trigger a warning if the backend says something is wrong
-            if (warning) handleWarning(warning, 'proctoring');
+            if (warning) {
+              // Silent logging for specific infractions (Admin only)
+              // These will not count towards session termination
+              if (warning.includes('Multiple Faces') || 
+                  warning.includes('Device Detected') || 
+                  warning.includes('No Face Detected') || 
+                  warning.includes('Looking Away')) {
+                // The backend already logs these to the DB; we keep it silent for the student
+                console.log('Silent Proctoring Log:', warning);
+              } else {
+                handleWarning(warning, 'proctoring');
+              }
+            }
           })
           .catch(() => {/* silent – backend may be restarting */});
       }, 'image/jpeg', 0.7);

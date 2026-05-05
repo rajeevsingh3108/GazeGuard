@@ -30,55 +30,71 @@ const Login_user = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-white text-gray-200 ">
-        <img className=" w-24 h-24 rounded-full m-8" alt="Logo" src={logo}>
-        </img>
-        <h1 className="font-Zen font-medium text-end text-3xl mb-2 text-black  ">GazeGuard</h1>
+    <div className="min-h-screen bg-mesh bg-dots flex flex-col items-center justify-center px-4">
+      {/* Logo */}
+      <a href="/" className="flex items-center gap-3 mb-10 group">
+        <img className="w-10 h-10 rounded-xl shadow-sm" alt="Logo" src={logo} />
+        <span className="font-bold text-xl text-gray-900 tracking-tight">
+          Gaze<span className="text-indigo-600">Guard</span>
+        </span>
+      </a>
 
-      <div className="w-80 rounded-lg bg-gray-100 p-8 shadow-xl">
-        <p className="text-center text-xl font-bold text-black font-Orbitron">Login</p>
-        <form className="mt-6" onSubmit={handleSubmit}>
-          <div className="mt-1 text-sm">
-            <label htmlFor="username" className="block text-gray-900 font-Lex ">
-              Username:
+      {/* Card */}
+      <div className="w-full max-w-[400px] card p-8 animate-fade-in-up">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">Welcome back</h1>
+          <p className="text-sm text-gray-500">Sign in to your student account</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
+              Username
             </label>
             <input
               type="text"
-              name="username"
               id="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full rounded-md border border-black bg-white px-3 py-2 text-black focus:border-indigo-400 focus:outline-none"
+              className="input-premium"
+              placeholder="Enter your username"
+              required
             />
           </div>
-          <div className="mt-4 text-sm">
-            <label htmlFor="password" className="block text-gray-900 font-Lex">
-              Password:
+
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              Password
             </label>
             <input
               type="password"
-              name="password"
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-md border border-black bg-white px-3 py-2 text-black focus:border-indigo-400 focus:outline-none"
+              className="input-premium"
+              placeholder="Enter your password"
+              required
             />
-            <div className="flex justify-end mt-2 text-xs text-gray-400">
-
-            </div>
           </div>
-          <button
-            type="submit"
-            className="mt-6 w-full rounded-md bg-black py-2 text-white font-semibold hover:bg-indigo-950 font-Orbitron"
-          >
+
+          {error && (
+            <div className="flex items-center gap-2 text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">
+              <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+              {error}
+            </div>
+          )}
+
+          <button type="submit" className="btn-primary w-full !py-3.5 !rounded-xl">
             Sign in
           </button>
         </form>
-        {error && <p className="text-red-500">{error}</p>} {/* Display error message */}
-        <p className="mt-4 text-center text-xs text-black font-Lex">
+
+        <p className="mt-8 text-center text-sm text-gray-500">
           Don&apos;t have an account?{" "}
-          <a href="/Register" className="text-black hover:underline hover:text-indigo-600 ">
-            Sign up
+          <a href="/Register" className="font-semibold text-indigo-600 hover:text-indigo-500 transition-colors">
+            Create account
           </a>
         </p>
       </div>

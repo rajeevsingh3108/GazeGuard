@@ -90,21 +90,22 @@ const UserCodingTest = () => {
 
     if (!testData) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-slate-100">
-                <div className="bg-white p-10 rounded-2xl shadow-xl flex flex-col gap-6 items-center border border-gray-200">
-                    <h2 className="text-3xl font-Orbitron font-bold text-gray-800">Coding Assessment</h2>
-                    <p className="text-gray-500 font-Lex text-center mb-2">Enter the assessment code provided by your administrator.</p>
+            <div className="min-h-screen flex items-center justify-center bg-mesh bg-dots">
+                <div className="card p-10 flex flex-col gap-6 items-center max-w-sm w-full mx-4 animate-fade-in-up">
+                    <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center text-2xl">💻</div>
+                    <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Coding Assessment</h2>
+                    <p className="text-gray-500 text-center text-sm">Enter the assessment code provided by your administrator.</p>
                     <input 
-                        className="border-2 border-gray-300 p-4 rounded-xl w-72 text-center text-xl font-bold tracking-widest uppercase focus:border-blue-500 outline-none transition" 
+                        className="input-premium !text-center !text-xl !font-bold !tracking-widest !uppercase !py-4" 
                         value={testCode} 
                         onChange={e => setTestCode(e.target.value.toUpperCase())} 
                         placeholder="CODE" 
                     />
                     <button 
                         onClick={handleFetchTest} 
-                        className="bg-blue-600 text-white w-full py-4 rounded-xl font-Orbitron font-bold text-lg hover:bg-blue-700 shadow-md transition"
+                        className="btn-primary w-full !py-4 !text-base !rounded-2xl"
                     >
-                        Enter Environment
+                        Enter Environment →
                     </button>
                 </div>
             </div>
@@ -115,17 +116,17 @@ const UserCodingTest = () => {
         <div className="h-screen flex flex-col bg-[#0f172a] text-gray-100 font-sans">
             
             {/* Header */}
-            <div className="h-16 bg-[#1e293b] flex justify-between items-center px-6 shadow-md border-b border-slate-700">
+            <div className="h-16 bg-[#1e293b] flex justify-between items-center px-6 shadow-sm border-b border-slate-700">
                 <div className="flex items-center gap-4">
-                    <div className="bg-blue-600 w-3 h-3 rounded-full animate-pulse"></div>
-                    <h1 className="text-xl font-Orbitron font-bold text-blue-400">{testData.title}</h1>
+                    <div className="bg-indigo-500 w-3 h-3 rounded-full animate-pulse"></div>
+                    <h1 className="text-xl font-semibold text-indigo-400">{testData.title}</h1>
                 </div>
                 
                 <div className="flex items-center gap-6">
-                    <div className={`text-xl font-mono font-bold px-4 py-1 rounded bg-slate-900 border ${timeLeft < 60 ? 'border-red-500 text-red-500 animate-pulse' : 'border-slate-600 text-gray-300'}`}>
+                    <div className={`text-xl font-mono font-bold px-4 py-1.5 rounded-lg bg-slate-900 border ${timeLeft < 60 ? 'border-rose-500 text-rose-500 animate-pulse' : 'border-slate-700 text-gray-300'}`}>
                         {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}
                     </div>
-                    <button onClick={handleSubmit} className="bg-green-600 px-8 py-2 rounded-lg font-Orbitron font-bold hover:bg-green-500 shadow transition text-white">
+                    <button onClick={handleSubmit} className="bg-emerald-600 px-6 py-2 rounded-lg font-medium hover:bg-emerald-500 shadow-sm transition-colors text-white">
                         Submit Solution
                     </button>
                 </div>
@@ -137,19 +138,19 @@ const UserCodingTest = () => {
                 {/* Left Pane: Problem Description */}
                 <div className="w-1/3 bg-[#1e293b] p-6 overflow-y-auto border-r border-slate-700 flex flex-col gap-6 shadow-inner">
                     <div>
-                        <h2 className="text-xl font-bold mb-3 text-white border-b border-slate-600 pb-2">Problem Statement</h2>
-                        <p className="whitespace-pre-wrap text-gray-300 font-Lex leading-relaxed text-sm">
+                        <h2 className="text-xl font-bold mb-4 text-white border-b border-slate-700 pb-3">Problem Statement</h2>
+                        <p className="whitespace-pre-wrap text-gray-300 leading-relaxed text-sm">
                             {testData.problem_statement}
                         </p>
                     </div>
                     
-                    <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700">
-                        <h3 className="font-bold text-sm text-blue-400 uppercase tracking-wider mb-2">Sample Input</h3>
+                    <div className="bg-slate-900/50 p-5 rounded-xl border border-slate-700">
+                        <h3 className="font-semibold text-xs text-indigo-400 uppercase tracking-wider mb-3">Sample Input</h3>
                         <pre className="font-mono text-sm text-gray-300 whitespace-pre-wrap">{testData.sample_input}</pre>
                     </div>
                     
-                    <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700">
-                        <h3 className="font-bold text-sm text-green-400 uppercase tracking-wider mb-2">Sample Output</h3>
+                    <div className="bg-slate-900/50 p-5 rounded-xl border border-slate-700">
+                        <h3 className="font-semibold text-xs text-emerald-400 uppercase tracking-wider mb-3">Sample Output</h3>
                         <pre className="font-mono text-sm text-gray-300 whitespace-pre-wrap">{testData.sample_output}</pre>
                     </div>
 
@@ -165,9 +166,9 @@ const UserCodingTest = () => {
                     {/* Toolbar */}
                     <div className="h-14 bg-[#1e293b] border-b border-slate-700 flex items-center justify-between px-6">
                         <div className="flex items-center gap-3">
-                            <span className="text-sm font-semibold text-gray-400">Language:</span>
+                            <span className="text-sm font-medium text-gray-400">Language:</span>
                             <select 
-                                className="bg-[#0f172a] text-white border border-slate-600 px-3 py-1.5 rounded-lg outline-none font-bold text-sm focus:border-blue-500" 
+                                className="bg-[#0f172a] text-white border border-slate-700 px-3 py-1.5 rounded-lg outline-none font-medium text-sm focus:border-indigo-500 transition-colors" 
                                 value={language} 
                                 onChange={e => setLanguage(e.target.value)}
                             >
@@ -179,9 +180,9 @@ const UserCodingTest = () => {
                         
                         <button 
                             onClick={handleRunCode} 
-                            className="bg-slate-700 px-5 py-1.5 rounded-lg font-bold text-sm hover:bg-slate-600 transition flex items-center gap-2 text-white border border-slate-600"
+                            className="bg-slate-700 px-5 py-2 rounded-lg font-medium text-sm hover:bg-slate-600 transition flex items-center gap-2 text-white border border-slate-600 shadow-sm"
                         >
-                            <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4l12 6-12 6z"/></svg>
+                            <svg className="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4l12 6-12 6z"/></svg>
                             Run Code
                         </button>
                     </div>
@@ -205,8 +206,8 @@ const UserCodingTest = () => {
                     />
 
                     {/* Output Console */}
-                    <div className="h-56 bg-[#0f172a] border-t-2 border-slate-700 flex flex-col shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.3)]">
-                        <div className="bg-[#1e293b] px-4 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-slate-800">
+                    <div className="h-56 bg-[#0f172a] border-t border-slate-700 flex flex-col">
+                        <div className="bg-[#1e293b] px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider border-b border-slate-800">
                             Console Output
                         </div>
                         <div className="flex-1 p-4 overflow-y-auto font-mono text-sm text-gray-300 whitespace-pre-wrap">

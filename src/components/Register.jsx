@@ -53,7 +53,7 @@ function Register() {
     }
 
     // Send a POST request to register the user
-    const response = await fetch('http://127.0.0.1:5000/register', {
+    const response = await fetch('http://localhost:5000/register', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -78,71 +78,103 @@ function Register() {
   };
 
   return (
-    <div className = "flex flex-col justify-center items-center min-h-screen bg-white text-gray-200 ">
-       <img className=" w-24 h-24 rounded-full m-8" alt="Logo" src={logo}>
-        </img>
-        <h1 className="font-Zen font-medium text-end text-3xl mb-2 text-black  ">GazeGuard</h1>
-      <div className = "flex flex-col justify-center items-center  bg-gray-100 p-8 rounded-lg">
+    <div className="min-h-screen bg-mesh bg-dots flex flex-col items-center justify-center px-4 py-12">
+      {/* Logo */}
+      <a href="/" className="flex items-center gap-3 mb-10 group">
+        <img className="w-10 h-10 rounded-xl shadow-sm" alt="Logo" src={logo} />
+        <span className="font-bold text-xl text-gray-900 tracking-tight">
+          Gaze<span className="text-indigo-600">Guard</span>
+        </span>
+      </a>
 
-      
-      <h1 className="mb-8 font-medium text-2xl  text-black font-Orbitron ">Register</h1>
-      <form onSubmit={handleSubmit}>
-        <div className = "mb-2 font-Lex ">
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Username"
-            required
-            className="mb-4 w-80 p-2 rounded-lg text-slate-950 border-black "
-          />
+      {/* Card */}
+      <div className="w-full max-w-[440px] card p-8 animate-fade-in-up">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">Create an account</h1>
+          <p className="text-sm text-gray-500">Join GazeGuard to start taking proctored exams</p>
         </div>
-        <div className="mb-2 font-Lex">
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
-            required
-            className="mb-4 w-80 p-2 rounded-lg text-slate-950 border-black"
-          />
-        </div>
-        <div className="mb-0 font-Lex text-black">
-          <label htmlFor="role   ">Select Role:</label>
-          <select
-            id="role"
-            value={role}
-            onChange={(e) => { setRole(e.target.value); setFaceImage(null); }}
-            className="w-full rounded-lg p-2 text-slate-950"
-          >
-            <option value="user" className='text-slate-950'>User</option>
-            <option value="admin"className="text-slate-950">Admin</option>
-          </select>
-        </div>
-        
-        {role === 'user' && (
-          <div className="mt-4 flex flex-col items-center">
-            <video ref={videoRef} autoPlay muted className="w-64 h-48 bg-black mb-2 rounded-lg" />
-            <canvas ref={canvasRef} style={{ display: 'none' }}></canvas>
-            <button 
-              onClick={captureFace} 
-              className="mb-2 w-full rounded-md bg-green-600 py-2 text-white font-semibold hover:bg-green-700 font-Orbitron"
-            >
-              Capture Face
-            </button>
-            {faceImage && <p className="text-green-500 font-Lex">Face captured successfully!</p>}
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="input-premium"
+              placeholder="Choose a username"
+              required
+            />
           </div>
-        )}
 
-        <button
-          type="submit"
-         className="mt-8 w-full rounded-md bg-black py-2 text-white font-semibold hover:bg-indigo-950 font-Orbitron"
-        >
-          Register
-        </button>
-      </form>
-      {error && <p style={{ color: 'red' }}>{error}</p>} {/* Display error message */}
-    </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="input-premium"
+              placeholder="Create a password"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Account Type</label>
+            <select
+              value={role}
+              onChange={(e) => { setRole(e.target.value); setFaceImage(null); }}
+              className="input-premium !cursor-pointer"
+            >
+              <option value="user">Student</option>
+              <option value="admin">Administrator</option>
+            </select>
+          </div>
+          
+          {role === 'user' && (
+            <div className="mt-2 space-y-3">
+              <label className="block text-sm font-medium text-gray-700">Face Verification</label>
+              <div className="relative rounded-xl overflow-hidden border border-gray-200 bg-gray-900">
+                <video ref={videoRef} autoPlay muted className="w-full h-48 object-cover" />
+                {faceImage && (
+                  <div className="absolute inset-0 bg-emerald-500/10 flex items-center justify-center">
+                    <span className="badge badge-emerald !text-sm !px-4 !py-2 shadow-lg">
+                      ✓ Face Captured
+                    </span>
+                  </div>
+                )}
+              </div>
+              <canvas ref={canvasRef} style={{ display: 'none' }}></canvas>
+              <button 
+                onClick={captureFace} 
+                className="btn-secondary w-full !py-2.5 !rounded-xl !text-sm"
+              >
+                {faceImage ? '📸 Recapture Face' : '📸 Capture Face'}
+              </button>
+            </div>
+          )}
+
+          {error && (
+            <div className="flex items-center gap-2 text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">
+              <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+              {error}
+            </div>
+          )}
+
+          <button type="submit" className="btn-primary w-full !py-3.5 !rounded-xl">
+            Create Account
+          </button>
+        </form>
+
+        <p className="mt-8 text-center text-sm text-gray-500">
+          Already have an account?{" "}
+          <a href="/login_user" className="font-semibold text-indigo-600 hover:text-indigo-500 transition-colors">
+            Sign in
+          </a>
+        </p>
+      </div>
     </div>
   );
 }

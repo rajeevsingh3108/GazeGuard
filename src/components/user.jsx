@@ -3,8 +3,6 @@ import { React, useEffect } from 'react';
 import NavbarU from './navUser';
 import { useLocation, useNavigate } from "react-router-dom";
 import logo from '../assets/logoexam.jpg'
-import Ut2 from "./underline2"
-import Marquee from "./textloop"
 
 const User = () => {
 
@@ -32,108 +30,96 @@ const User = () => {
 
   return (
     <>
-      <div className="min-h-screen flex bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden relative">
+      <div className="min-h-screen flex bg-slate-50">
 
-        {/* 🔹 Top-left Logo */}
-        <div className="absolute top-4 left-4 flex items-center space-x-3">
-          <img className="w-14 h-14 rounded-full shadow-md" alt="Logo" src={logo} />
-          <h1 className="font-Zen font-bold text-3xl tracking-wide text-slate-700 drop-shadow-lg">GazeGuard</h1>
-        </div>
+        {/* Sidebar */}
+        <aside className="w-[300px] h-screen bg-white border-r border-gray-200 hidden md:flex flex-col items-center py-10 px-6 fixed left-0 top-0">
 
-        {/* 🔹 Sidebar */}
-        <aside className="
-          w-[380px] lg:w-[420px] 
-          h-full 
-          bg-white/60 backdrop-blur-xl 
-          border-r border-white/30 
-          shadow-xl 
-          p-8 
-          flex flex-col items-center 
-          fixed left-0 top-0
-        ">
-          <div className="flex flex-col items-center mt-20">
+          {/* Logo */}
+          <a href="/" className="flex items-center gap-3 mb-12">
+            <img className="w-9 h-9 rounded-lg shadow-sm" alt="Logo" src={logo} />
+            <span className="font-bold text-lg text-gray-900 tracking-tight">
+              Gaze<span className="text-indigo-600">Guard</span>
+            </span>
+          </a>
 
-            {/* Profile image */}
-            <img
-              className="w-40 h-40 rounded-full object-cover shadow-xl border-4 border-blue-600"
-              src="https://i.pinimg.com/originals/59/af/9c/59af9cd100daf9aa154cc753dd58316d.jpg"
-              alt="Profile"
-            />
+          {/* Profile Section */}
+          <div className="flex flex-col items-center text-center">
+            <div className="relative">
+              <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-500 p-[3px]">
+                <img
+                  className="w-full h-full rounded-[13px] object-cover bg-white"
+                  src="https://i.pinimg.com/originals/59/af/9c/59af9cd100daf9aa154cc753dd58316d.jpg"
+                  alt="Profile"
+                />
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 rounded-full border-[3px] border-white"></div>
+            </div>
 
-            {/* Username */}
-            <h2 className="text-3xl font-Lex font-bold text-gray-800 mt-6">{username}</h2>
-            <p className="text-sm text-gray-500 font-Lex">Student</p>
+            <h2 className="text-xl font-bold text-gray-900 mt-5">{username}</h2>
+            <span className="badge badge-emerald mt-2">Student</span>
           </div>
 
-          {/* Logout button */}
-          <nav className="mt-10 w-full px-4">
+          {/* Logout */}
+          <div className="mt-auto w-full">
             <button
               onClick={handleLogout}
-              className="w-full py-3
-                         bg-red-500/10 text-red-600 
-                         font-Orbitron font-semibold
-                         rounded-lg 
-                         hover:bg-red-500 hover:text-white 
-                         transition-all duration-300 shadow-sm"
+              className="w-full flex items-center justify-center gap-2 py-3 text-sm font-medium text-rose-600 bg-rose-50 rounded-xl hover:bg-rose-100 transition-colors"
             >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
               Log Out
             </button>
-          </nav>
+          </div>
         </aside>
 
-        {/* 🔹 Main Content */}
-        <main className="flex-1 ml-[380px] lg:ml-[420px] flex flex-col items-center justify-center p-10">
-          
-          <div className="max-w-2xl w-full flex flex-col items-center space-y-10">
+        {/* Main Content */}
+        <main className="flex-1 md:ml-[300px] flex flex-col items-center justify-center p-10">
+          <div className="max-w-lg w-full flex flex-col items-center text-center">
 
-            {/* Animated banner */}
-            <Marquee />
+            <span className="badge badge-emerald !text-sm !px-4 !py-2 mb-6 inline-flex items-center gap-2">
+              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+              Ready to Begin
+            </span>
 
-            {/* Divider */}
-            <Ut2 />
-
-            {/* Instructions */}
-            <p className="text-gray-700 text-xl text-center max-w-xl leading-relaxed font-Mont">
-              Click on the button below to start your examination.  
-              Please ensure a stable network connection and follow all proctoring guidelines carefully.
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight mb-3">
+              Start Your Exam
+            </h1>
+            <p className="text-gray-500 text-base max-w-md leading-relaxed mb-10">
+              Ensure a stable internet connection and keep your camera on. 
+              All activity is monitored during the examination.
             </p>
 
-            <div className="flex flex-col md:flex-row gap-4 w-full justify-center">
+            <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
               <button
-                className="px-10 py-4 
-                           bg-blue-600 text-white 
-                           rounded-full 
-                           font-Orbitron text-xl tracking-wide 
-                           shadow-lg 
-                           hover:bg-blue-700 
-                           hover:shadow-xl 
-                           active:scale-95
-                           transition-all duration-300 w-full md:w-auto"
+                className="btn-primary !px-8 !py-4 !text-base !rounded-2xl shadow-lg shadow-indigo-500/25"
                 onClick={startTest}
               >
-                Start MCQ Exam
+                📝 Start MCQ Exam
               </button>
-
               <button
-                className="px-10 py-4 
-                           bg-indigo-600 text-white 
-                           rounded-full 
-                           font-Orbitron text-xl tracking-wide 
-                           shadow-lg 
-                           hover:bg-indigo-700 
-                           hover:shadow-xl 
-                           active:scale-95
-                           transition-all duration-300 w-full md:w-auto"
+                className="btn-secondary !px-8 !py-4 !text-base !rounded-2xl"
                 onClick={startCodingTest}
               >
-                Start Coding Exam
+                💻 Start Coding Exam
               </button>
             </div>
-          </div>
 
+            {/* Info cards */}
+            <div className="grid grid-cols-3 gap-4 mt-14 w-full max-w-md">
+              {[
+                { icon: '🔒', label: 'Secure' },
+                { icon: '📸', label: 'Proctored' },
+                { icon: '⏱️', label: 'Timed' }
+              ].map((item, i) => (
+                <div key={i} className="stat-card !p-4 flex flex-col items-center gap-2">
+                  <span className="text-2xl">{item.icon}</span>
+                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{item.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </main>
 
-        {/* Bottom Navbar */}
         <NavbarU />
       </div>
     </>

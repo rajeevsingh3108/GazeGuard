@@ -23,7 +23,8 @@ TURN_THRESHOLD = 40  # Change this based on your requirements
 
 # Function to create a connection to the database
 def get_db_connection():
-    conn = sqlite3.connect('users.db')
+    conn = sqlite3.connect('users.db', timeout=15.0)
+    conn.execute('PRAGMA journal_mode=WAL;')
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -72,6 +73,16 @@ def create_tables():
         conn.execute('ALTER TABLE user_test_sessions ADD COLUMN timestamp TEXT')
     except sqlite3.OperationalError:
         pass  # Column already exists
+        
+    try:
+        conn.execute('ALTER TABLE user_test_sessions ADD COLUMN score INTEGER')
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        conn.execute('ALTER TABLE user_test_sessions ADD COLUMN total INTEGER')
+    except sqlite3.OperationalError:
+        pass
     
     # Proctoring logs table
     conn.execute('''
@@ -193,20 +204,26 @@ def login():
     return jsonify({"message": "Invalid username or password."}), 401
 
 def analyze_head_orientation(face_rect, image_shape):
-    # Get the face rectangle
+    # Get the face rectangle [x, y, w, h]
     x, y, w, h = face_rect
+    img_h, img_w = image_shape[0], image_shape[1]
 
     # Calculate the center of the face
     face_center_x = x + w // 2
+    face_center_y = y + h // 2
 
-    # Determine if the face is within the threshold of the center of the frame
-    frame_center_x = image_shape[1] // 2
-    distance_from_center = abs(face_center_x - frame_center_x)
+    # Horizontal Check: Must be in the middle 30% of the screen (very strict)
+    frame_center_x = img_w // 2
+    distance_x = abs(face_center_x - frame_center_x)
+    horizontal_threshold = img_w // 6 # Stricter: 1/6 of width from center
 
-    # Allow the user to be anywhere within the central 66% of the screen
-    lenient_threshold = image_shape[1] // 3
+    # Vertical Check: Must be in the upper-middle band (where faces sit)
+    # Looking down at a phone or lap will move the face center below this band
+    expected_y = img_h * 0.4 # Typical face position
+    distance_y = abs(face_center_y - expected_y)
+    vertical_threshold = img_h // 6 # 16% deviation allowed
 
-    if distance_from_center > lenient_threshold:
+    if distance_x > horizontal_threshold or distance_y > vertical_threshold:
         return "Face Turned Away"
     else:
         return "Facing Camera"
@@ -225,43 +242,72 @@ def face_orientation():
     frame_bgr = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
     gray_frame = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
 
-    # Detect all faces — minNeighbors=5 reduces false-negatives, minSize=50 avoids noise
-    faces = face_cascade.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=5, minSize=(50, 50))
+    # Face Detection Fallback Logic
+    try:
+        import cvlib as cv
+        faces, confidences = cv.detect_face(frame_bgr)
+    except Exception as e:
+        print("cvlib face detection error, falling back to Haar:", e)
+        faces_raw = face_cascade.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=5, minSize=(50, 50))
+        faces = [[x, y, x+w, y+h] for (x, y, w, h) in faces_raw]
 
     orientation_status = "No Face Detected"
     sentiment = "Unknown"
-    warning = None
+    warnings_list = []
     num_faces = len(faces)
 
     if num_faces == 0:
-        warning = "No Face Detected — Please face the camera"
+        warnings_list.append("No Face Detected — Please face the camera")
         orientation_status = "No Face Detected"
     elif num_faces > 1:
-        warning = f"Multiple Faces Detected ({num_faces}) — Unauthorized person present"
+        warnings_list.append(f"Multiple Faces Detected ({num_faces}) — Unauthorized person present")
         orientation_status = "Multiple Faces"
     else:
         # Exactly one face — check orientation
-        orientation_status = analyze_head_orientation(faces[0], frame_bgr.shape)
+        f = faces[0]
+        rect = [f[0], f[1], f[2]-f[0], f[3]-f[1]]
+        orientation_status = analyze_head_orientation(rect, frame_bgr.shape)
         if orientation_status == "Face Turned Away":
-            warning = "Looking Away — Please focus on the screen"
+            warnings_list.append("Looking Away — Please focus on the screen")
 
         # Sentiment analysis (best-effort)
         try:
             from deepface import DeepFace
-            result = DeepFace.analyze(frame_bgr, actions=['emotion'], enforce_detection=False)
+            result = DeepFace.analyze(frame_bgr, actions=['emotion'], enforce_detection=False, silent=True)
             sentiment = result[0]['dominant_emotion'] if isinstance(result, list) else result['dominant_emotion']
         except Exception as e:
             print("Sentiment analysis error:", e)
 
-        # Phone/device detection (best-effort)
-        try:
-            import cvlib as cv
-            bbox, label, conf = cv.detect_common_objects(frame_bgr, model="yolov3-tiny")
-            detected = [l for l in label if l in ['cell phone', 'laptop', 'remote', 'tablet']]
-            if detected:
-                warning = f"Device Detected — {', '.join(set(detected))} found in frame"
-        except Exception as e:
-            print("Object detection error:", e)
+    # Phone/device detection using TensorFlow (Replacing broken cvlib/Darknet)
+    try:
+        import tensorflow as tf
+        from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2, preprocess_input, decode_predictions
+        
+        # Load model once (it will be cached in memory)
+        if not hasattr(app, 'device_model'):
+            print("Loading MobileNetV2 for device detection...")
+            app.device_model = MobileNetV2(weights='imagenet')
+            
+        # Resize and preprocess
+        img_for_tf = cv2.resize(frame_bgr, (224, 224))
+        img_for_tf = cv2.cvtColor(img_for_tf, cv2.COLOR_BGR2RGB)
+        x = np.expand_dims(img_for_tf, axis=0)
+        x = preprocess_input(x)
+        
+        preds = app.device_model.predict(x, verbose=0)
+        decoded = decode_predictions(preds, top=5)[0]
+        
+        # Labels to watch for
+        cheat_labels = ['cellular_telephone', 'handheld_computer', 'notebook', 'laptop', 'remote_control', 'tablet', 'book']
+        detected = [p[1] for p in decoded if p[1] in cheat_labels and p[2] > 0.15]
+        
+        if detected:
+            msg = f"Device Detected — {', '.join(set(detected)).replace('_', ' ')} found"
+            warnings_list.append(msg)
+            print(f"DEBUG: TF Detection: {msg}")
+            
+    except Exception as e:
+        print("TF Object detection error:", e)
 
     # Persist to DB
     if username and test_code:
@@ -270,15 +316,16 @@ def face_orientation():
             'INSERT INTO proctoring_logs (username, test_code, head_orientation, sentiment) VALUES (?, ?, ?, ?)',
             (username, test_code, orientation_status, sentiment)
         )
-        if warning:
+        for w in warnings_list:
             conn.execute(
                 'INSERT INTO warnings (username, test_code, warning_type) VALUES (?, ?, ?)',
-                (username, test_code, warning)
+                (username, test_code, w)
             )
         conn.commit()
         conn.close()
 
-    return jsonify({"status": orientation_status, "sentiment": sentiment, "warning": warning})
+    primary_warning = warnings_list[0] if warnings_list else None
+    return jsonify({"status": orientation_status, "sentiment": sentiment, "warning": primary_warning, "all_warnings": warnings_list})
 
 
 @app.route('/get-all-tests', methods=['GET'])
@@ -605,12 +652,20 @@ def get_user_test_details():
 
     conn = get_db_connection()
     
-    # Get test session details
+    # Try MCQ first
     session = conn.execute('''
-        SELECT answers, score, total 
+        SELECT answers, score, total, 'MCQ' as test_type
         FROM user_test_sessions 
         WHERE username = ? AND test_id = ?
     ''', (username, test_code)).fetchone()
+
+    # If not MCQ, try Coding
+    if not session:
+        session = conn.execute('''
+            SELECT code as answers, score, total, 'Coding' as test_type
+            FROM user_coding_sessions 
+            WHERE username = ? AND test_id = ?
+        ''', (username, test_code)).fetchone()
 
     # Get proctoring logs
     logs = conn.execute('''
@@ -631,17 +686,28 @@ def get_user_test_details():
     conn.close()
 
     if not session:
-        return jsonify({"error": "Session not found"}), 404
-
-    try:
-        answers = json.loads(session['answers']) if session['answers'] else {}
-    except:
         answers = {}
-        
-    attempted = len(answers.keys())
-    score = session['score'] if session['score'] is not None else 0
-    total = session['total'] if session['total'] is not None else 0
-    incorrect = attempted - score
+        attempted = 0
+        score = 0
+        total = 0
+        incorrect = 0
+    else:
+        test_type = session['test_type']
+        if test_type == 'MCQ':
+            try:
+                answers = json.loads(session['answers']) if session['answers'] else {}
+            except:
+                answers = {}
+            attempted = len(answers.keys())
+            score = session['score'] if session['score'] is not None else 0
+            total = session['total'] if session['total'] is not None else 0
+            incorrect = attempted - score
+        else:
+            answers = {"code": session['answers']} if session['answers'] else {}
+            score = session['score'] if session['score'] is not None else 0
+            total = session['total'] if session['total'] is not None else 0
+            attempted = total  # For coding, we assume they attempted if a session exists
+            incorrect = total - score
 
     return jsonify({
         "score": score,
@@ -832,6 +898,23 @@ def get_all_user_sessions():
         SELECT username, test_id, ip_address, session_login, score, total,
                timestamp, 'Coding' as test_type
         FROM user_coding_sessions
+        UNION ALL
+        SELECT username, test_code as test_id, 'N/A' as ip_address, 'Incomplete' as session_login, NULL as score, NULL as total,
+               MAX(timestamp) as timestamp, 
+               CASE WHEN EXISTS (SELECT 1 FROM coding_tests ct WHERE ct.test_code = proctoring_logs.test_code) THEN 'Coding' ELSE 'MCQ' END as test_type
+        FROM proctoring_logs
+        WHERE NOT EXISTS (SELECT 1 FROM user_test_sessions WHERE user_test_sessions.username = proctoring_logs.username AND user_test_sessions.test_id = proctoring_logs.test_code)
+        AND NOT EXISTS (SELECT 1 FROM user_coding_sessions WHERE user_coding_sessions.username = proctoring_logs.username AND user_coding_sessions.test_id = proctoring_logs.test_code)
+        GROUP BY username, test_code
+        UNION ALL
+        SELECT username, test_code as test_id, 'N/A' as ip_address, 'Incomplete' as session_login, NULL as score, NULL as total,
+               MAX(timestamp) as timestamp, 
+               CASE WHEN EXISTS (SELECT 1 FROM coding_tests ct WHERE ct.test_code = warnings.test_code) THEN 'Coding' ELSE 'MCQ' END as test_type
+        FROM warnings
+        WHERE NOT EXISTS (SELECT 1 FROM user_test_sessions WHERE user_test_sessions.username = warnings.username AND user_test_sessions.test_id = warnings.test_code)
+        AND NOT EXISTS (SELECT 1 FROM user_coding_sessions WHERE user_coding_sessions.username = warnings.username AND user_coding_sessions.test_id = warnings.test_code)
+        AND NOT EXISTS (SELECT 1 FROM proctoring_logs WHERE proctoring_logs.username = warnings.username AND proctoring_logs.test_code = warnings.test_code)
+        GROUP BY username, test_code
         ORDER BY timestamp DESC
     '''
     sessions = conn.execute(query).fetchall()

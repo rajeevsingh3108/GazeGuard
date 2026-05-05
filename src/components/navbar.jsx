@@ -2,216 +2,38 @@ import React from 'react'
 
 const Navbar = () => {
   return (
-    <div className="flex flex-col justify-center items-center relative transition-all duration-500 w-20 m-3">
-
-      <article
-        className="
-          w-full 
-          rounded-2xl 
-          bg-white/70 
-          backdrop-blur-xl 
-          shadow-lg 
-          border border-gray-300/40 
-          p-2 
-          flex flex-col 
-          items-center
-        "
-      >
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 md:fixed md:bottom-auto md:left-auto md:right-6 md:top-1/2 md:-translate-y-1/2 md:translate-x-0">
+      <nav className="flex md:flex-col items-center gap-2 bg-white/90 backdrop-blur-xl shadow-lg border border-gray-200/60 rounded-2xl p-2">
 
         {/* HOME */}
-        <label
-          htmlFor="home"
-          className="
-            w-full h-16 
-            rounded-xl 
-            border border-gray-200 
-            flex items-center justify-center 
-            cursor-pointer 
-            group 
-            mb-3
-            hover:bg-gray-100 
-            transition-all duration-300
-          "
-        >
-          <input type="radio" name="nav" id="home" className="hidden" />
-
-          {/* Tooltip */}
-          <div className="
-            absolute left-20 
-            opacity-0 group-hover:opacity-100 
-            bg-black/70 text-white 
-            px-3 py-1 
-            rounded-lg 
-            text-xs 
-            transition-opacity duration-300
-            pointer-events-none
-          ">
-            Home
-          </div>
-
-          <a href="/" className="text-black">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none"
-              viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor"
-              className="w-7 h-7 group-hover:scale-110 transition-transform">
-              <path strokeLinecap="round" strokeLinejoin="round"
-                d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 
-                1.591 0L21.75 12M4.5 9.75v10.125c0 
-                .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 
-                1.125-1.125h2.25c.621 0 1.125.504 
-                1.125 1.125V21h4.125c.621 0 
-                1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
-              />
-            </svg>
-          </a>
-        </label>
-
-
+        <a href="/" className="group relative w-12 h-12 rounded-xl flex items-center justify-center hover:bg-indigo-50 transition-all duration-200">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor"
+            className="w-5 h-5 text-gray-500 group-hover:text-indigo-600 transition-colors">
+            <path strokeLinecap="round" strokeLinejoin="round"
+              d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+          </svg>
+          <span className="absolute -top-8 md:-top-0 md:-left-20 bg-gray-900 text-white text-xs px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Home</span>
+        </a>
 
         {/* PROFILE */}
-        <label
-          htmlFor="profile"
-          className="
-            w-full h-16 
-            rounded-xl 
-            border border-gray-200 
-            flex items-center justify-center 
-            cursor-pointer 
-            group 
-            mb-3
-            hover:bg-gray-100 
-            transition-all duration-300
-          "
-        >
-          <input type="radio" name="nav" id="profile" className="hidden" />
-
-          <div className="
-            absolute left-20 
-            opacity-0 group-hover:opacity-100 
-            bg-black/70 text-white 
-            px-3 py-1 
-            rounded-lg 
-            text-xs 
-            transition-opacity duration-300
-            pointer-events-none
-          ">
-            Profile
-          </div>
-
-          <a href="/admin">
-            <svg xmlns="http://www.w3.org/2000/svg"
-              width="28" height="28" viewBox="0 0 24 24"
-              className="text-gray-800 group-hover:text-blue-600 group-hover:scale-110 transition-all">
-              <path
-                d="M12 2a5 5 0 1 0 5 5 
-                5 5 0 0 0-5-5zm0 8a3 3 
-                0 1 1 3-3 3 3 0 0 
-                1-3 3zm9 11v-1a7 7 0 0 
-                0-7-7h-4a7 7 0 0 0-7 
-                7v1h2v-1a5 5 0 0 1 5-5h4a5 
-                5 0 0 1 5 5v1z"
-              />
-            </svg>
-          </a>
-        </label>
-
-
+        <a href="/admin" className="group relative w-12 h-12 rounded-xl flex items-center justify-center hover:bg-indigo-50 transition-all duration-200">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor"
+            className="w-5 h-5 text-gray-500 group-hover:text-indigo-600 transition-colors">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+          </svg>
+          <span className="absolute -top-8 md:-top-0 md:-left-20 bg-gray-900 text-white text-xs px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Profile</span>
+        </a>
 
         {/* DASHBOARD */}
-        <label
-          htmlFor="dashboard"
-          className="
-            w-full h-16 
-            rounded-xl 
-            border border-gray-200 
-            flex items-center justify-center 
-            cursor-pointer 
-            group 
-            mb-3
-            hover:bg-gray-100 
-            transition-all duration-300
-          "
-        >
-          <input type="radio" name="nav" id="dashboard" className="hidden" />
+        <a href="/dashboard" className="group relative w-12 h-12 rounded-xl flex items-center justify-center hover:bg-indigo-50 transition-all duration-200">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor"
+            className="w-5 h-5 text-gray-500 group-hover:text-indigo-600 transition-colors">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+          </svg>
+          <span className="absolute -top-8 md:-top-0 md:-left-24 bg-gray-900 text-white text-xs px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Dashboard</span>
+        </a>
 
-          <div className="
-            absolute left-20 opacity-0 group-hover:opacity-100
-            bg-black/70 text-white
-            px-3 py-1 rounded-lg text-xs
-            transition-opacity duration-300
-            pointer-events-none
-          ">
-            Dashboard
-          </div>
-
-          <a href="/dashboard">
-            <svg xmlns="http://www.w3.org/2000/svg"
-              width="28" height="28" viewBox="0 0 24 24"
-              className="text-gray-800 group-hover:text-blue-600 group-hover:scale-110 transition-all">
-              <path
-                d="M4 13h6a1 1 0 0 0 1-1V4a1 1 
-                0 0 0-1-1H4a1 1 0 0 
-                0-1 1v8a1 1 0 0 0 1 1zm-1 
-                7a1 1 0 0 0 1 1h6a1 1 
-                0 0 0 1-1v-4a1 1 0 0 
-                0-1-1H4a1 1 0 0 0-1 
-                1v4zm10 0a1 1 0 0 0 1 
-                1h6a1 1 0 0 0 1-1v-7a1 1 
-                0 0 0-1-1h-6a1 1 0 0 
-                0-1 1v7zm1-10h6a1 1 0 0 
-                0 1-1V4a1 1 0 0 0-1-1h-6a1 1 
-                0 0 0-1 1v5a1 1 0 0 
-                0 1 1z"
-              />
-            </svg>
-          </a>
-        </label>
-
-
-
-        {/* ALERTS */}
-        <label
-          htmlFor="alerts"
-          className="
-            w-full h-16 
-            rounded-xl 
-            border border-gray-200 
-            flex items-center justify-center 
-            cursor-pointer 
-            group 
-            hover:bg-gray-100 
-            transition-all duration-300
-          "
-        >
-          <input type="radio" name="nav" id="alerts" className="hidden" />
-
-          <div className="
-            absolute left-20 opacity-0 group-hover:opacity-100
-            bg-black/70 text-white
-            px-3 py-1 rounded-lg text-xs
-            transition-opacity duration-300
-            pointer-events-none
-          ">
-            Alerts
-          </div>
-
-          <a href="#Alerts">
-            <svg xmlns="http://www.w3.org/2000/svg"
-              width="28" height="28" viewBox="0 0 24 24"
-              className="text-gray-800 group-hover:text-blue-600 group-hover:scale-110 transition-all">
-              <path
-                d="M11.953 2C6.465 2 2 6.486 2 12s4.486 
-                10 10 10 10-4.486 10-10S17.493 
-                2 11.953 2zM12 20c-4.411 0-8-3.589-8-8s3.567-8 
-                7.953-8C16.391 4 20 7.589 20 12s-3.589 8-8 
-                8z"
-              />
-              <path d="M11 7h2v7h-2zm0 8h2v2h-2z" />
-            </svg>
-          </a>
-        </label>
-
-
-      </article>
+      </nav>
     </div>
   )
 }

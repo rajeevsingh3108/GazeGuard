@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import Navbar from './navbar';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import Ut3 from "./underline3";
 import { PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 
 const Dashboard = () => {
@@ -148,166 +147,209 @@ const Dashboard = () => {
   const COLORS = ['#ef4444', '#f59e0b', '#8b5cf6', '#3b82f6', '#10b981', '#6b7280'];
 
   return (
-    <div className="min-h-screen flex bg-slate-100 relative">
-      {/* MAIN WRAPPER */}
+    <div className="min-h-screen flex bg-slate-50">
       <div className="flex flex-col flex-grow items-center w-full py-10 px-4 md:px-12">
-        <Ut3 />
+        
+        {/* Header */}
+        <div className="w-full max-w-7xl mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">Dashboard</h1>
+          <p className="text-gray-500 mt-1">Manage your tests and monitor student activity</p>
+        </div>
 
-        {/* TEST TABLE */}
-        <div className="w-full mt-8">
-          <div className="bg-white/90 backdrop-blur-md shadow-xl border border-gray-200 rounded-xl p-6">
-            <h2 className="text-3xl font-Orbitron font-bold text-gray-800 mb-4">
-              Available Tests
-            </h2>
-            <table className="w-full border border-gray-300 rounded-xl overflow-hidden shadow-md">
-              <thead className="bg-black text-white">
-                <tr>
-                  <th className="p-3 text-xl">Test Code</th>
-                  <th className="p-3 text-xl">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tests.map((test, index) => (
-                  <tr 
-                    key={index}
-                    className="text-center text-gray-800 font-medium hover:bg-blue-50 transition"
-                  >
-                    <td className="p-4 border border-gray-300 text-lg">
-                      {test.test_code}
-                    </td>
-                    <td className="p-3 border border-gray-300 flex flex-col md:flex-row justify-center items-center gap-3">
-                      {!test.is_test_started ? (
-                        <button
-                          onClick={() => handleStartTest(test.test_code)}
-                          className="bg-green-600 text-white px-6 py-2 rounded-lg shadow hover:bg-green-700 font-Orbitron"
-                        >
-                          Start Test
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleEndTest(test.test_code)}
-                          className="bg-red-600 text-white px-6 py-2 rounded-lg shadow hover:bg-red-700 font-Orbitron"
-                        >
-                          End Test
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleResetTest(test.test_code)}
-                        className="bg-yellow-500 text-white px-6 py-2 rounded-lg shadow hover:bg-yellow-600 font-Orbitron"
-                      >
-                        Reset Test
-                      </button>
-                    </td>
+        {/* Stats Row */}
+        <div className="w-full max-w-7xl grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+          <div className="stat-card flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-xl">📝</div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{tests.length}</p>
+              <p className="text-sm text-gray-500">MCQ Tests</p>
+            </div>
+          </div>
+          <div className="stat-card flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-violet-50 flex items-center justify-center text-xl">💻</div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{codingTests.length}</p>
+              <p className="text-sm text-gray-500">Coding Tests</p>
+            </div>
+          </div>
+          <div className="stat-card flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-xl">👥</div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{userDetails.length}</p>
+              <p className="text-sm text-gray-500">Submissions</p>
+            </div>
+          </div>
+        </div>
+
+        {/* MCQ TESTS TABLE */}
+        <div className="w-full max-w-7xl mb-8">
+          <div className="card p-0 overflow-hidden">
+            <div className="px-6 py-5 border-b border-gray-100">
+              <h2 className="text-lg font-bold text-gray-900">MCQ Tests</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="table-premium">
+                <thead>
+                  <tr>
+                    <th>Test Code</th>
+                    <th>Status</th>
+                    <th className="text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {tests.map((test, index) => (
+                    <tr key={index}>
+                      <td className="font-semibold text-gray-900">{test.test_code}</td>
+                      <td>
+                        <span className={`badge ${test.is_test_started ? 'badge-emerald' : 'badge-amber'}`}>
+                          {test.is_test_started ? '● Live' : '○ Not Started'}
+                        </span>
+                      </td>
+                      <td className="text-right">
+                        <div className="flex justify-end gap-2">
+                          {!test.is_test_started ? (
+                            <button
+                              onClick={() => handleStartTest(test.test_code)}
+                              className="btn-primary !px-4 !py-2 !text-xs !rounded-lg !shadow-none"
+                            >
+                              Start
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleEndTest(test.test_code)}
+                              className="inline-flex items-center justify-center rounded-lg bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-700 transition-all"
+                            >
+                              End
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleResetTest(test.test_code)}
+                            className="btn-secondary !px-4 !py-2 !text-xs !rounded-lg !shadow-none"
+                          >
+                            Reset
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {tests.length === 0 && (
+                    <tr><td colSpan="3" className="text-center py-12 text-gray-400">No MCQ tests created yet</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
         {/* CODING TESTS TABLE */}
-        <div className="w-full mt-8">
-          <div className="bg-white/90 backdrop-blur-md shadow-xl border border-gray-200 rounded-xl p-6">
-            <h2 className="text-3xl font-Orbitron font-bold text-indigo-800 mb-4">
-              Available Coding Tests
-            </h2>
-            <table className="w-full border border-gray-300 rounded-xl overflow-hidden shadow-md">
-              <thead className="bg-black text-white">
-                <tr>
-                  <th className="p-3 text-xl">Test Code</th>
-                  <th className="p-3 text-xl">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {codingTests.map((test, index) => (
-                  <tr 
-                    key={index}
-                    className="text-center text-gray-800 font-medium hover:bg-indigo-50 transition"
-                  >
-                    <td className="p-4 border border-gray-300 text-lg">
-                      {test.test_code}
-                    </td>
-                    <td className="p-3 border border-gray-300 flex flex-col md:flex-row justify-center items-center gap-3">
-                      {!test.is_test_started ? (
-                        <button
-                          onClick={() => handleStartCodingTest(test.test_code)}
-                          className="bg-green-600 text-white px-6 py-2 rounded-lg shadow hover:bg-green-700 font-Orbitron"
-                        >
-                          Start Test
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleEndCodingTest(test.test_code)}
-                          className="bg-red-600 text-white px-6 py-2 rounded-lg shadow hover:bg-red-700 font-Orbitron"
-                        >
-                          End Test
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-                {codingTests.length === 0 && (
+        <div className="w-full max-w-7xl mb-8">
+          <div className="card p-0 overflow-hidden">
+            <div className="px-6 py-5 border-b border-gray-100">
+              <h2 className="text-lg font-bold text-gray-900">Coding Tests</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="table-premium">
+                <thead>
                   <tr>
-                    <td colSpan="2" className="p-6 text-gray-500 font-Mont text-center">
-                      No coding tests available. Create one to get started!
-                    </td>
+                    <th>Test Code</th>
+                    <th>Status</th>
+                    <th className="text-right">Actions</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {codingTests.map((test, index) => (
+                    <tr key={index}>
+                      <td className="font-semibold text-gray-900">{test.test_code}</td>
+                      <td>
+                        <span className={`badge ${test.is_test_started ? 'badge-emerald' : 'badge-amber'}`}>
+                          {test.is_test_started ? '● Live' : '○ Not Started'}
+                        </span>
+                      </td>
+                      <td className="text-right">
+                        {!test.is_test_started ? (
+                          <button
+                            onClick={() => handleStartCodingTest(test.test_code)}
+                            className="btn-primary !px-4 !py-2 !text-xs !rounded-lg !shadow-none"
+                          >
+                            Start
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleEndCodingTest(test.test_code)}
+                            className="inline-flex items-center justify-center rounded-lg bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-700 transition-all"
+                          >
+                            End
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                  {codingTests.length === 0 && (
+                    <tr><td colSpan="3" className="text-center py-12 text-gray-400">No coding tests created yet</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
-        {/* USER DETAILS TABLE */}
-        <div className="w-full mt-12">
-          <div className="bg-white/90 backdrop-blur-md shadow-xl border border-gray-200 rounded-xl p-6">
-            <h2 className="text-3xl font-Orbitron font-bold text-gray-800 mb-4">
-              User Session Logs
-            </h2>
-            <table className="w-full border border-gray-300 rounded-xl overflow-hidden shadow-md">
-              <thead className="bg-black text-white">
-                <tr>
-                  <th className="p-3 text-xl">User Name</th>
-                  <th className="p-3 text-xl">Test Code</th>
-                  <th className="p-3 text-xl">Type</th>
-                  <th className="p-3 text-xl">IP Address</th>
-                  <th className="p-3 text-xl">Session Login</th>
-                  <th className="p-3 text-xl">Completed At</th>
-                  <th className="p-3 text-xl">Score</th>
-                </tr>
-              </thead>
-              <tbody>
-                {userDetails.map((user, index) => (
-                  <tr
-                    key={index}
-                    className="text-center font-medium text-gray-800 hover:bg-blue-50 transition"
-                  >
-                    <td className="p-4 border border-gray-300">{user.user_name}</td>
-                    <td className="p-4 border border-gray-300">{user.test_id}</td>
-                    <td className="p-4 border border-gray-300">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${user.test_type === 'MCQ' ? 'bg-blue-100 text-blue-700' : 'bg-indigo-100 text-indigo-700'}`}>
-                        {user.test_type}
-                      </span>
-                    </td>
-                    <td className="p-4 border border-gray-300">{user.ip_address}</td>
-                    <td className="p-4 border border-gray-300">{user.session_login}</td>
-                    <td className="p-4 border border-gray-300 text-sm text-gray-600">{user.timestamp || 'N/A'}</td>
-                    <td className="p-4 border border-gray-300">
-                      {user.score !== null && user.score !== undefined ? (
-                        <button 
-                          onClick={() => handleScoreClick(user.user_name, user.test_id)}
-                          className="font-bold text-blue-600 hover:text-blue-800 hover:underline px-3 py-1 rounded"
-                        >
-                          {user.score} / {user.total}
-                        </button>
-                      ) : (
-                        'N/A'
-                      )}
-                    </td>
+        {/* USER SESSIONS TABLE */}
+        <div className="w-full max-w-7xl mb-8">
+          <div className="card p-0 overflow-hidden">
+            <div className="px-6 py-5 border-b border-gray-100">
+              <h2 className="text-lg font-bold text-gray-900">Student Submissions</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="table-premium">
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th>Test Code</th>
+                    <th>Type</th>
+                    <th>IP Address</th>
+                    <th>Session</th>
+                    <th>Completed</th>
+                    <th className="text-right">Logs</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {userDetails.map((user, index) => (
+                    <tr key={index}>
+                      <td className="font-semibold text-gray-900">{user.user_name}</td>
+                      <td className="text-gray-600 font-mono text-xs">{user.test_id}</td>
+                      <td>
+                        <span className={`badge ${user.test_type === 'MCQ' ? 'badge-indigo' : 'badge-rose'}`}>
+                          {user.test_type}
+                        </span>
+                      </td>
+                      <td className="text-gray-500 font-mono text-xs">{user.ip_address}</td>
+                      <td className="text-gray-500 text-xs">{user.session_login}</td>
+                      <td className="text-gray-500 text-xs">{user.timestamp || '—'}</td>
+                      <td className="text-right">
+                        {user.score !== null && user.score !== undefined ? (
+                          <button 
+                            onClick={() => handleScoreClick(user.user_name, user.test_id)}
+                            className="font-bold text-indigo-600 hover:text-indigo-900 transition-colors hover:underline underline-offset-4"
+                          >
+                            {user.score}/{user.total}
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={() => handleScoreClick(user.user_name, user.test_id)}
+                            className="font-semibold text-rose-600 hover:text-rose-800 transition-colors hover:underline underline-offset-4 text-xs bg-rose-50 px-3 py-1 rounded-full"
+                          >
+                            View Logs
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                  {userDetails.length === 0 && (
+                    <tr><td colSpan="7" className="text-center py-12 text-gray-400">No submissions yet</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -316,64 +358,70 @@ const Dashboard = () => {
 
       {/* DETAILED LOGS MODAL */}
       {userDetailsModalVisible && selectedDetails && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-gray-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="card w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
             
-            <div className="flex justify-between items-center p-6 border-b bg-gray-50 rounded-t-2xl">
-              <h3 className="text-2xl font-Orbitron font-bold text-gray-800">
-                Detailed Report - {selectedDetails.username} ({selectedDetails.testCode})
-              </h3>
+            {/* Modal Header */}
+            <div className="flex justify-between items-center px-8 py-6 border-b border-gray-100 bg-gray-50/50">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Student Report</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  {selectedDetails.username} — <span className="font-mono">{selectedDetails.testCode}</span>
+                </p>
+              </div>
               <button
                 onClick={() => setUserDetailsModalVisible(false)}
-                className="text-gray-500 hover:text-red-500 transition text-3xl font-bold"
+                className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-900 transition-colors"
               >
-                &times;
+                ✕
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto flex-grow grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Modal Body */}
+            <div className="p-8 overflow-y-auto flex-grow grid grid-cols-1 lg:grid-cols-2 gap-8">
               
-              {/* LEFT COLUMN: Stats & Chart */}
+              {/* LEFT: Stats & Chart */}
               <div className="flex flex-col gap-6">
                 
                 {/* Score Cards */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl text-center shadow-sm">
-                    <p className="text-xs text-blue-600 font-semibold mb-1">Total Questions</p>
-                    <p className="text-3xl font-bold text-blue-800">{selectedDetails.total}</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="stat-card text-center">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Total</p>
+                    <p className="text-3xl font-bold text-gray-900">{selectedDetails.total}</p>
                   </div>
-                  <div className="bg-purple-50 border border-purple-200 p-4 rounded-xl text-center shadow-sm">
-                    <p className="text-xs text-purple-600 font-semibold mb-1">Attempted</p>
-                    <p className="text-3xl font-bold text-purple-800">{selectedDetails.attempted}</p>
+                  <div className="stat-card text-center">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Attempted</p>
+                    <p className="text-3xl font-bold text-gray-900">{selectedDetails.attempted}</p>
                   </div>
-                  <div className="bg-green-50 border border-green-200 p-4 rounded-xl text-center shadow-sm">
-                    <p className="text-xs text-green-600 font-semibold mb-1">✅ Correct</p>
-                    <p className="text-3xl font-bold text-green-800">{selectedDetails.score}</p>
+                  <div className="stat-card text-center border-emerald-100">
+                    <p className="text-xs font-semibold text-emerald-500 uppercase tracking-wider mb-2">Correct</p>
+                    <p className="text-3xl font-bold text-emerald-600">{selectedDetails.score}</p>
                   </div>
-                  <div className="bg-red-50 border border-red-200 p-4 rounded-xl text-center shadow-sm">
-                    <p className="text-xs text-red-600 font-semibold mb-1">❌ Incorrect</p>
-                    <p className="text-3xl font-bold text-red-800">{selectedDetails.incorrect}</p>
+                  <div className="stat-card text-center border-rose-100">
+                    <p className="text-xs font-semibold text-rose-500 uppercase tracking-wider mb-2">Incorrect</p>
+                    <p className="text-3xl font-bold text-rose-600">{selectedDetails.incorrect}</p>
                   </div>
                 </div>
-                {/* Score percentage bar */}
-                <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
-                  <div className="flex justify-between text-sm font-semibold mb-1">
-                    <span className="text-gray-600">Score</span>
-                    <span className={`font-bold ${selectedDetails.total > 0 && (selectedDetails.score / selectedDetails.total) >= 0.6 ? 'text-green-600' : 'text-red-600'}`}>
+
+                {/* Score Progress Bar */}
+                <div className="stat-card">
+                  <div className="flex justify-between text-sm font-semibold mb-3">
+                    <span className="text-gray-500">Score</span>
+                    <span className={`${selectedDetails.total > 0 && (selectedDetails.score / selectedDetails.total) >= 0.6 ? 'text-emerald-600' : 'text-rose-600'}`}>
                       {selectedDetails.total > 0 ? Math.round((selectedDetails.score / selectedDetails.total) * 100) : 0}%
                     </span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
+                  <div className="w-full bg-gray-100 rounded-full h-3">
                     <div
-                      className={`h-3 rounded-full transition-all ${selectedDetails.total > 0 && (selectedDetails.score / selectedDetails.total) >= 0.6 ? 'bg-green-500' : 'bg-red-500'}`}
+                      className={`h-3 rounded-full transition-all duration-500 ${selectedDetails.total > 0 && (selectedDetails.score / selectedDetails.total) >= 0.6 ? 'bg-gradient-to-r from-emerald-400 to-emerald-600' : 'bg-gradient-to-r from-rose-400 to-rose-600'}`}
                       style={{ width: `${selectedDetails.total > 0 ? (selectedDetails.score / selectedDetails.total) * 100 : 0}%` }}
                     />
                   </div>
                 </div>
 
                 {/* Pie Chart */}
-                <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex flex-col items-center">
-                  <h4 className="text-lg font-Orbitron font-semibold mb-2">Proctoring Analytics</h4>
+                <div className="stat-card flex flex-col items-center">
+                  <h4 className="text-sm font-bold text-gray-900 mb-4 self-start">Proctoring Analytics</h4>
                   {pieData.length > 0 ? (
                     <PieChart width={300} height={250}>
                       <Pie
@@ -393,84 +441,71 @@ const Dashboard = () => {
                       <Legend verticalAlign="bottom" height={36}/>
                     </PieChart>
                   ) : (
-                    <div className="h-48 flex items-center justify-center text-gray-400">
-                      No Proctoring Infractions
+                    <div className="h-48 flex flex-col items-center justify-center text-gray-400">
+                      <span className="text-4xl mb-2">✓</span>
+                      <span className="text-sm">No Infractions Detected</span>
                     </div>
                   )}
                 </div>
-
               </div>
 
-              {/* RIGHT COLUMN: Logs Table */}
+              {/* RIGHT: Logs */}
               <div className="flex flex-col gap-6">
                 
                 {/* Warnings */}
-                <div className="bg-red-50 border border-red-200 rounded-xl p-4 shadow-sm flex-grow">
-                  <h4 className="text-lg font-Orbitron font-semibold text-red-700 mb-3">Warnings</h4>
+                <div className="stat-card border-rose-100 flex-grow">
+                  <h4 className="text-sm font-bold text-rose-700 mb-4 flex items-center gap-2">
+                    <span className="w-2 h-2 bg-rose-500 rounded-full"></span>
+                    Warnings ({selectedDetails.warnings.length})
+                  </h4>
                   {selectedDetails.warnings.length > 0 ? (
-                    <div className="max-h-40 overflow-y-auto pr-2">
-                      <table className="w-full text-sm text-left">
-                        <thead>
-                          <tr className="border-b border-red-200 text-red-800">
-                            <th className="pb-2">Time</th>
-                            <th className="pb-2">Warning</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {selectedDetails.warnings.map((w, i) => (
-                            <tr key={i} className="border-b border-red-100 last:border-0">
-                              <td className="py-2 text-gray-600">{w.timestamp}</td>
-                              <td className="py-2 font-semibold text-red-600">{w.warning_type}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                    <div className="max-h-40 overflow-y-auto">
+                      <div className="space-y-2">
+                        {selectedDetails.warnings.map((w, i) => (
+                          <div key={i} className="flex items-center justify-between text-sm bg-rose-50/50 rounded-lg px-3 py-2">
+                            <span className="text-gray-500 text-xs font-mono">{w.timestamp}</span>
+                            <span className="badge badge-rose !text-[10px]">{w.warning_type}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-500">No warnings recorded.</p>
+                    <p className="text-sm text-gray-400">No warnings recorded.</p>
                   )}
                 </div>
 
                 {/* General Logs */}
-                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 shadow-sm flex-grow">
-                  <h4 className="text-lg font-Orbitron font-semibold text-gray-700 mb-3">General Logs</h4>
+                <div className="stat-card flex-grow">
+                  <h4 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
+                    Proctoring Logs ({selectedDetails.logs.length})
+                  </h4>
                   {selectedDetails.logs.length > 0 ? (
-                    <div className="max-h-48 overflow-y-auto pr-2">
-                      <table className="w-full text-sm text-left">
-                        <thead>
-                          <tr className="border-b border-gray-200 text-gray-700">
-                            <th className="pb-2">Time</th>
-                            <th className="pb-2">Orientation</th>
-                            <th className="pb-2">Sentiment</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {selectedDetails.logs.map((log, i) => (
-                            <tr key={i} className="border-b border-gray-100 last:border-0">
-                              <td className="py-2 text-gray-500">{log.timestamp}</td>
-                              <td className="py-2">
-                                <span className={`px-2 py-1 rounded text-xs ${log.head_orientation === 'Facing Camera' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                  {log.head_orientation}
-                                </span>
-                              </td>
-                              <td className="py-2 capitalize">{log.sentiment}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                    <div className="max-h-48 overflow-y-auto">
+                      <div className="space-y-2">
+                        {selectedDetails.logs.map((log, i) => (
+                          <div key={i} className="flex items-center justify-between text-sm bg-gray-50/50 rounded-lg px-3 py-2">
+                            <span className="text-gray-400 text-xs font-mono">{log.timestamp}</span>
+                            <div className="flex items-center gap-2">
+                              <span className={`badge !text-[10px] ${log.head_orientation === 'Facing Camera' ? 'badge-emerald' : 'badge-rose'}`}>
+                                {log.head_orientation}
+                              </span>
+                              <span className="text-xs text-gray-500 capitalize">{log.sentiment}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-500">No proctoring logs available.</p>
+                    <p className="text-sm text-gray-400">No proctoring logs available.</p>
                   )}
                 </div>
-
               </div>
               
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 };

@@ -1167,10 +1167,15 @@ const McqTest = () => {
         setIsTestStarted(true);
         enterFullscreen();
       } else {
-        alert("Invalid test code");
+        alert("Invalid test code or test not started by admin.");
         setQuestions([]);
       }
     } catch (e) {
+      if (e.response && e.response.status === 404) {
+        alert("Test not found or not started by the admin. Please check the test code or ask the admin to start the test.");
+      } else {
+        alert("Error fetching test data. Please ensure the backend is running and the code is correct.");
+      }
       console.error(e);
     }
   };
@@ -1359,78 +1364,90 @@ const McqTest = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center py-10">
-      <div className="w-full max-w-7xl">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center py-10 user-select-none">
+      <div className="w-full max-w-7xl px-4">
 
         {!isTestStarted ? (
-          <div className="bg-white p-10 rounded-2xl shadow-xl border max-w-3xl mx-auto">
-            <h1 className="text-4xl font-Orbitron font-bold text-center mb-6">
-              Enter Test Code
-            </h1>
+          <div className="max-w-md mx-auto">
+            <div className="card p-10 flex flex-col items-center text-center animate-fade-in-up">
+              <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center text-2xl mb-6">📝</div>
+              <h1 className="text-2xl font-bold text-gray-900 tracking-tight mb-2">
+                MCQ Examination
+              </h1>
+              <p className="text-sm text-gray-500 mb-8">Enter the test code provided by your administrator</p>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <input
-                value={testCode}
-                onChange={(e) => setTestCode(e.target.value)}
-                placeholder="Enter Test Code"
-                className="px-4 py-3 border rounded-lg w-80"
-              />
-              <button
-                onClick={fetchTest}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700"
-              >
-                Submit
-              </button>
-            </div>
+              <div className="w-full space-y-4">
+                <input
+                  value={testCode}
+                  onChange={(e) => setTestCode(e.target.value)}
+                  placeholder="Enter test code"
+                  className="input-premium !text-center !text-xl !font-bold !tracking-widest !uppercase !py-4"
+                />
+                <button
+                  onClick={fetchTest}
+                  className="btn-primary w-full !py-4 !text-base !rounded-2xl"
+                >
+                  Start Exam →
+                </button>
+              </div>
 
-            <div className="mt-8 bg-slate-100 p-6 rounded-xl border">
-              <h2 className="text-xl font-Orbitron text-center mb-4">Rules</h2>
-              <ul className="list-disc list-inside text-sm text-slate-700 space-y-2">
-                <li>Exam auto-submits when time ends</li>
-                <li>No tab switching</li>
-                <li>No exiting fullscreen</li>
-                <li>Face the camera always</li>
-                <li>Repeated violations end the exam</li>
-              </ul>
+              <div className="mt-8 w-full bg-gray-50 p-5 rounded-xl border border-gray-100 text-left">
+                <h2 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                  <span className="w-2 h-2 bg-rose-500 rounded-full"></span>
+                  Rules
+                </h2>
+                <ul className="text-xs text-gray-500 space-y-2 leading-relaxed">
+                  <li>• Exam auto-submits when time ends</li>
+                  <li>• No tab switching allowed</li>
+                  <li>• Do not exit fullscreen</li>
+                  <li>• Face the camera at all times</li>
+                  <li>• Repeated violations will end the exam</li>
+                </ul>
+              </div>
             </div>
           </div>
         ) : (
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-            {/* LEFT PANEL */}
-            <div className="lg:col-span-2 bg-white p-8 rounded-xl shadow border">
-              <div className="flex justify-between mb-6">
-                <div>
-                  <h2 className="text-3xl font-Orbitron font-semibold">
-                    Question {currentQuestionIndex + 1}
-                  </h2>
-                  <p className="text-slate-600 text-sm mt-1">
-                    Test Code: <b>{testCode}</b>
-                  </p>
+            {/* LEFT PANEL — Questions */}
+            <div className="lg:col-span-2 card p-8">
+              <div className="flex justify-between items-start mb-8">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-sm font-bold text-indigo-600">
+                    Q{currentQuestionIndex + 1}
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">
+                      Question {currentQuestionIndex + 1}
+                    </h2>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Test: <span className="font-mono font-semibold text-gray-600">{testCode}</span>
+                    </p>
+                  </div>
                 </div>
 
-                <div className="text-right">
-                  <p className="text-xs text-slate-500">Time Remaining</p>
-                  <p className="text-3xl font-Orbitron font-bold">
+                <div className="stat-card !p-3 !rounded-xl text-right">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Time Left</p>
+                  <p className={`text-xl font-mono font-bold ${timer < 300 ? 'text-rose-600' : 'text-gray-900'}`}>
                     {formatTime()}
                   </p>
                 </div>
               </div>
 
-              <p className="text-2xl font-Lex mb-6">
+              <p className="text-lg text-gray-800 mb-8 leading-relaxed">
                 {questions[currentQuestionIndex]?.question}
               </p>
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {questions[currentQuestionIndex]?.options.map((op, i) => (
                   <label
                     key={i}
-                    className={`p-4 border rounded-lg flex items-center cursor-pointer
+                    className={`p-4 border rounded-xl flex items-center cursor-pointer transition-all duration-200
                       ${
                         selectedOption === i
-                          ? "bg-blue-50 border-blue-500 shadow-inner"
-                          : "bg-white border-gray-300 hover:bg-gray-50"
+                          ? "bg-indigo-50 border-indigo-500 shadow-sm"
+                          : "bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300"
                       }`}
                   >
                     <input
@@ -1440,24 +1457,26 @@ const McqTest = () => {
                       onChange={() => setSelectedOption(i)}
                     />
                     <span
-                      className={`w-5 h-5 rounded-full border mr-4 ${
+                      className={`w-5 h-5 rounded-full border-2 mr-4 flex-shrink-0 flex items-center justify-center transition-colors ${
                         selectedOption === i
-                          ? "bg-blue-500 border-blue-500"
-                          : "border-gray-400 bg-white"
+                          ? "border-indigo-600 bg-indigo-600"
+                          : "border-gray-300 bg-white"
                       }`}
-                    />
-                    {op}
+                    >
+                      {selectedOption === i && <div className="w-2 h-2 rounded-full bg-white" />}
+                    </span>
+                    <span className="text-sm text-gray-700">{op}</span>
                   </label>
                 ))}
               </div>
 
-              <div className="flex justify-between mt-10">
+              <div className="flex justify-between mt-10 pt-6 border-t border-gray-100">
                 <button
                   onClick={handlePrevQuestion}
                   disabled={currentQuestionIndex === 0}
-                  className="px-5 py-3 bg-gray-100 border rounded-md disabled:opacity-50"
+                  className="btn-secondary !py-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  Previous
+                  ← Previous
                 </button>
 
                 <button
@@ -1466,36 +1485,43 @@ const McqTest = () => {
                       ? handleSubmitTest
                       : handleNextQuestion
                   }
-                  className="px-8 py-3 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-700"
+                  className={`!py-2.5 !px-8 ${
+                    currentQuestionIndex === questions.length - 1
+                      ? "inline-flex items-center justify-center rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-all"
+                      : "btn-primary"
+                  }`}
                 >
                   {currentQuestionIndex === questions.length - 1
-                    ? "Submit Test"
-                    : "Next"}
+                    ? "Submit Test ✓"
+                    : "Next →"}
                 </button>
               </div>
             </div>
 
             {/* RIGHT PANEL */}
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-4">
 
-              <div className="bg-black p-3 rounded-xl shadow border">
-                <div className="w-full h-[340px] rounded overflow-hidden">
+              {/* Camera */}
+              <div className="rounded-2xl overflow-hidden border border-gray-800 bg-gray-900 p-2">
+                <div className="w-full h-[250px] rounded-xl overflow-hidden bg-black relative">
                   <FaceOrientationChecker username={username} testCode={testCode} />
                 </div>
               </div>
 
-              <div className="bg-white p-5 rounded-xl shadow border">
-                <h3 className="font-Orbitron mb-3 text-lg">Navigate Questions</h3>
-
-                <div className="flex flex-wrap gap-2">
+              {/* Question Navigator */}
+              <div className="card p-5">
+                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Navigate</h3>
+                <div className="grid grid-cols-5 gap-2">
                   {questions.map((_, i) => (
                     <button
                       key={i}
                       onClick={() => goToQuestion(i)}
-                      className={`px-4 py-2 rounded ${
+                      className={`h-10 rounded-xl text-xs font-semibold transition-all duration-200 ${
                         currentQuestionIndex === i
-                          ? "bg-blue-600 text-white"
-                          : "bg-gray-200 hover:bg-gray-300"
+                          ? "bg-indigo-600 text-white shadow-sm scale-105"
+                          : answers[questions[i]?.question] 
+                            ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                            : "bg-gray-50 text-gray-600 border border-gray-200 hover:bg-indigo-50 hover:text-indigo-600"
                       }`}
                     >
                       {i + 1}
@@ -1504,39 +1530,41 @@ const McqTest = () => {
                 </div>
               </div>
 
-              <div className="bg-white p-4 rounded-xl shadow border text-center">
-                <p className="text-xs text-slate-500">Warnings Remaining</p>
-                <p className="text-3xl font-bold text-rose-600">{remainingWarnings}</p>
+              {/* Warnings */}
+              <div className="stat-card !border-rose-100 flex flex-col items-center justify-center text-center !py-5">
+                <p className="text-[10px] font-bold text-rose-500 uppercase tracking-widest mb-1">Warnings Left</p>
+                <p className={`text-3xl font-bold ${remainingWarnings <= 1 ? 'text-rose-600' : 'text-rose-500'}`}>{remainingWarnings}</p>
               </div>
             </div>
           </div>
         )}
 
+        {/* Warning Modal */}
         {modalVisible && (
-          <div className="fixed inset-0 bg-black/60 flex items-center justify-center px-4">
-            <div className="bg-white p-8 rounded-2xl shadow-2xl max-w-xl w-full">
+          <div className="fixed inset-0 bg-gray-900/70 backdrop-blur-sm flex items-center justify-center px-4 z-50">
+            <div className="card max-w-md w-full p-8 animate-fade-in-up">
               <div className="flex gap-4">
-                <div className="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 font-bold">
-                  !
+                <div className="w-12 h-12 rounded-2xl bg-rose-50 flex items-center justify-center flex-shrink-0">
+                  <span className="text-2xl">⚠️</span>
                 </div>
 
                 <div>
-                  <h2 className="text-2xl font-semibold text-rose-700">Warning!</h2>
+                  <h2 className="text-xl font-bold text-rose-700">Warning</h2>
 
-                  <p className="mt-2 text-slate-600">
-                    You exited fullscreen mode. Return immediately.
+                  <p className="mt-2 text-sm text-gray-600">
+                    You exited fullscreen mode. Return immediately to continue your exam.
                   </p>
 
-                  <p className="mt-2 text-sm text-slate-500">
-                    Warnings left:
-                    <b className="text-rose-600"> {remainingWarnings}</b><br />
-                    Auto submit in <b>{countdown}</b> seconds.
+                  <p className="mt-3 text-sm text-gray-500">
+                    Warnings left: <span className="font-bold text-rose-600">{remainingWarnings}</span>
+                    <br />
+                    Auto-submit in <span className="font-bold text-gray-900">{countdown}</span> seconds
                   </p>
 
                   <div className="flex justify-end mt-6">
                     <button
                       onClick={handleModalClose}
-                      className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      className="btn-primary !py-2.5"
                     >
                       Return to Fullscreen
                     </button>
