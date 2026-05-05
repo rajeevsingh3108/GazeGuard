@@ -12,6 +12,8 @@ import Dashboard from './components/admin_dashboard.jsx'
 import User from "./components/user.jsx"
 import UserTest from "./components/user_test.jsx"
 import Video from './components/video.jsx'
+import AdminCoding from './components/admin_coding.jsx'
+import UserCodingTest from './components/user_coding_test.jsx'
 
 const router=createBrowserRouter([
   {
@@ -53,6 +55,14 @@ const router=createBrowserRouter([
   {
     path:"/video",
     element:<Video/>
+  },
+  {
+    path: "/admin-coding",
+    element: <AdminCoding />
+  },
+  {
+    path: "/user-coding-test",
+    element: <UserCodingTest />
   }
 
 ])

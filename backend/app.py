@@ -9,6 +9,7 @@ from flask_cors import CORS
 from functools import wraps
 from PIL import Image
 import io
+import requests
 
 app = Flask(__name__ )
 CORS(app)  # Enable CORS
@@ -57,15 +58,20 @@ def create_tables():
         CREATE TABLE IF NOT EXISTS user_test_sessions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL,
-            test_id INTEGER NOT NULL,
+            test_id TEXT NOT NULL,
             answers TEXT NOT NULL,
             ip_address TEXT NOT NULL,
             session_login TEXT NOT NULL,
             score INTEGER,
             total INTEGER,
-            FOREIGN KEY (test_id) REFERENCES tests (id)
+            timestamp TEXT
         )
     ''')
+    # Add timestamp column to existing tables (NULL default works in SQLite ALTER TABLE)
+    try:
+        conn.execute('ALTER TABLE user_test_sessions ADD COLUMN timestamp TEXT')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
     
     # Proctoring logs table
     conn.execute('''
@@ -98,6 +104,47 @@ def create_tables():
         )
     ''')
 
+    # Coding Tests table
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS coding_tests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            test_code TEXT UNIQUE NOT NULL,
+            title TEXT NOT NULL,
+            problem_statement TEXT NOT NULL,
+            sample_input TEXT NOT NULL,
+            sample_output TEXT NOT NULL,
+            test_cases TEXT NOT NULL,
+            timer INTEGER NOT NULL,
+            is_test_started BOOLEAN DEFAULT 0
+        )
+    ''')
+
+    try:
+        conn.execute('ALTER TABLE coding_tests ADD COLUMN is_test_started BOOLEAN DEFAULT 0')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
+    try:
+        conn.execute('ALTER TABLE user_test_sessions ADD COLUMN timestamp DATETIME DEFAULT CURRENT_TIMESTAMP')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
+    # User Coding Test Sessions table
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS user_coding_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            test_id TEXT NOT NULL,
+            code TEXT NOT NULL,
+            language TEXT NOT NULL,
+            score INTEGER,
+            total INTEGER,
+            ip_address TEXT NOT NULL,
+            session_login TEXT NOT NULL,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
     conn.commit()
     conn.close()
 
@@ -124,18 +171,24 @@ def login():
     data = request.get_json()
     username = data.get('username')
     password = data.get('password')
+    expected_role = data.get('expected_role', 'user')  # 'user' or 'admin'
     conn = get_db_connection()
-    user = conn.execute('SELECT * FROM users WHERE LOWER(username) = ?', (username,)).fetchone()
-    print(user)  # See if the users table contains data
+    user = conn.execute('SELECT * FROM users WHERE LOWER(username) = ?', (username.lower(),)).fetchone()
     conn.close()
     if user:
-        # Append the salt to the password and hash it
         salt = user['salt']
         salted_password = password.encode('utf-8') + salt
         if bcrypt.checkpw(salted_password, user['password']):
-            # Generate a token with the user's info, including their role
-            token = generate_token(username, user['role'])  # Implement your token generation logic here
-            return jsonify({"message": "Login successful!", "redirect": "/user", "token": token}), 200
+            actual_role = user['role']
+            # Role mismatch enforcement
+            if actual_role != expected_role:
+                if expected_role == 'admin':
+                    return jsonify({"message": "Access denied. This account is not an admin account. Please use the User login portal."}), 403
+                else:
+                    return jsonify({"message": "Access denied. Admin accounts cannot log in from the User portal. Please use the Admin login portal."}), 403
+            token = generate_token(username, actual_role)
+            redirect_path = "/admin" if actual_role == "admin" else "/user"
+            return jsonify({"message": "Login successful!", "redirect": redirect_path, "token": token, "role": actual_role}), 200
 
     return jsonify({"message": "Invalid username or password."}), 401
 
@@ -145,13 +198,15 @@ def analyze_head_orientation(face_rect, image_shape):
 
     # Calculate the center of the face
     face_center_x = x + w // 2
-    face_center_y = y + h // 2
 
     # Determine if the face is within the threshold of the center of the frame
     frame_center_x = image_shape[1] // 2
     distance_from_center = abs(face_center_x - frame_center_x)
 
-    if distance_from_center > TURN_THRESHOLD:
+    # Allow the user to be anywhere within the central 66% of the screen
+    lenient_threshold = image_shape[1] // 3
+
+    if distance_from_center > lenient_threshold:
         return "Face Turned Away"
     else:
         return "Facing Camera"
@@ -165,61 +220,61 @@ def face_orientation():
     username = request.form.get('username')
     test_code = request.form.get('testCode')
 
-    # Get the frame (image) from the request
     frame_file = request.files['frame']
     img_rgb = np.array(Image.open(io.BytesIO(frame_file.read())))
     frame_bgr = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
-
-    # Convert the image to grayscale
     gray_frame = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
 
-    # Detect faces in the image
-    faces = face_cascade.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=4, minSize=(30, 30))
+    # Detect all faces — minNeighbors=5 reduces false-negatives, minSize=50 avoids noise
+    faces = face_cascade.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=5, minSize=(50, 50))
 
     orientation_status = "No Face Detected"
     sentiment = "Unknown"
     warning = None
-    
-    if len(faces) == 0:
-        warning = "No Face Detected"
-    elif len(faces) > 0:
-        for face_rect in faces:
-            orientation_status = analyze_head_orientation(face_rect, frame_bgr.shape)
-            
+    num_faces = len(faces)
+
+    if num_faces == 0:
+        warning = "No Face Detected — Please face the camera"
+        orientation_status = "No Face Detected"
+    elif num_faces > 1:
+        warning = f"Multiple Faces Detected ({num_faces}) — Unauthorized person present"
+        orientation_status = "Multiple Faces"
+    else:
+        # Exactly one face — check orientation
+        orientation_status = analyze_head_orientation(faces[0], frame_bgr.shape)
+        if orientation_status == "Face Turned Away":
+            warning = "Looking Away — Please focus on the screen"
+
+        # Sentiment analysis (best-effort)
         try:
             from deepface import DeepFace
-            # Analyze sentiment on the BGR frame
             result = DeepFace.analyze(frame_bgr, actions=['emotion'], enforce_detection=False)
-            if isinstance(result, list):
-                sentiment = result[0]['dominant_emotion']
-            else:
-                sentiment = result['dominant_emotion']
+            sentiment = result[0]['dominant_emotion'] if isinstance(result, list) else result['dominant_emotion']
         except Exception as e:
-            print("Error analyzing sentiment:", e)
-            
-        # Object detection for phones/gadgets
+            print("Sentiment analysis error:", e)
+
+        # Phone/device detection (best-effort)
         try:
             import cvlib as cv
             bbox, label, conf = cv.detect_common_objects(frame_bgr, model="yolov3-tiny")
-            if 'cell phone' in label or 'laptop' in label or 'remote' in label:
-                warning = "Device Detected (Phone/Gadget)"
+            detected = [l for l in label if l in ['cell phone', 'laptop', 'remote', 'tablet']]
+            if detected:
+                warning = f"Device Detected — {', '.join(set(detected))} found in frame"
         except Exception as e:
-            print("Error detecting objects:", e)
+            print("Object detection error:", e)
 
-    # Save to database if username and test_code are provided
+    # Persist to DB
     if username and test_code:
         conn = get_db_connection()
-        conn.execute('''
-            INSERT INTO proctoring_logs (username, test_code, head_orientation, sentiment)
-            VALUES (?, ?, ?, ?)
-        ''', (username, test_code, orientation_status, sentiment))
-        
+        conn.execute(
+            'INSERT INTO proctoring_logs (username, test_code, head_orientation, sentiment) VALUES (?, ?, ?, ?)',
+            (username, test_code, orientation_status, sentiment)
+        )
         if warning:
-            conn.execute('''
-                INSERT INTO warnings (username, test_code, warning_type)
-                VALUES (?, ?, ?)
-            ''', (username, test_code, warning))
-            
+            conn.execute(
+                'INSERT INTO warnings (username, test_code, warning_type) VALUES (?, ?, ?)',
+                (username, test_code, warning)
+            )
         conn.commit()
         conn.close()
 
@@ -229,24 +284,16 @@ def face_orientation():
 @app.route('/get-all-tests', methods=['GET'])
 def get_all_tests():
     conn = get_db_connection()
-    
-    # Fetch all tests
-    tests_query = '''
-        SELECT test_code, is_test_started
-        FROM tests
-    '''
-    tests = conn.execute(tests_query).fetchall()
+    tests = conn.execute('SELECT test_code, is_test_started FROM tests').fetchall()
     conn.close()
-    
-    # Convert tests to a list of dictionaries
-    tests_data = []
-    for test in tests:
-        tests_data.append({
-            'test_code': test['test_code'],
-            'is_test_started': test['is_test_started']
-        })
-    
-    return jsonify(tests_data), 200
+    return jsonify([dict(t) for t in tests]), 200
+
+@app.route('/get-all-coding-tests', methods=['GET'])
+def get_all_coding_tests():
+    conn = get_db_connection()
+    tests = conn.execute('SELECT test_code, is_test_started FROM coding_tests').fetchall()
+    conn.close()
+    return jsonify([dict(t) for t in tests]), 200
 
 @app.route('/start-test', methods=['POST'])
 def start_test():
@@ -272,6 +319,44 @@ def end_test():
 
     return jsonify({"message": "Test ended successfully."}), 200
 
+@app.route('/start-coding-test', methods=['POST'])
+def start_coding_test():
+    data = request.get_json()
+    test_code = data.get('testCode')
+    conn = get_db_connection()
+    conn.execute('UPDATE coding_tests SET is_test_started = ? WHERE test_code = ?', (True, test_code))
+    conn.commit()
+    conn.close()
+    return jsonify({"message": "Coding test started successfully."}), 200
+
+@app.route('/end-coding-test', methods=['POST'])
+def end_coding_test():
+    data = request.get_json()
+    test_code = data.get('testCode')
+    conn = get_db_connection()
+    conn.execute('UPDATE coding_tests SET is_test_started = ? WHERE test_code = ?', (False, test_code))
+    conn.commit()
+    conn.close()
+    return jsonify({"message": "Coding test ended successfully."}), 200
+
+@app.route('/log-warning', methods=['POST'])
+def log_warning():
+    """Lets the frontend persist client-side warnings (tab-switch, copy-paste) to the DB."""
+    data = request.get_json()
+    username = data.get('username')
+    test_code = data.get('testCode')
+    warning_type = data.get('warningType')
+    if not all([username, test_code, warning_type]):
+        return jsonify({"error": "Missing fields"}), 400
+    conn = get_db_connection()
+    conn.execute(
+        'INSERT INTO warnings (username, test_code, warning_type) VALUES (?, ?, ?)',
+        (username, test_code, warning_type)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"message": "Warning logged."}), 201
+
 @app.route('/submit-test', methods=['POST'])
 def submit_test():
     data = request.get_json()
@@ -296,26 +381,25 @@ def submit_test():
             if correct_ans and answers.get(q_text) == correct_ans:
                 score += 1
 
+    from datetime import datetime
     # Insert data into the user_test_sessions table
-    conn.execute('''
-        INSERT INTO user_test_sessions (username, test_id, answers, ip_address, session_login, score, total)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    ''', (username, test_id, json.dumps(answers), ip_address, session_login, score, total))
-    
+    conn.execute(
+        'INSERT INTO user_test_sessions (username, test_id, answers, ip_address, session_login, score, total, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        (username, test_id, json.dumps(answers), ip_address, session_login, score, total, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'))
+    )
     conn.commit()
     conn.close()
-    
     return jsonify({"message": "Test submitted successfully.", "score": score, "total": total}), 201
 
 @app.route('/get-test-data/<test_code>', methods=['GET'])
 def get_test_data(test_code):
     conn = get_db_connection()
 
-    # Query the test based on test_code
+    # Query the test based on test_code and ensure it has been started by an admin
     test_query = '''
         SELECT test_code, questions, timer, is_test_started
         FROM tests
-        WHERE test_code = ?
+        WHERE test_code = ? AND is_test_started = 1
     '''
     test = conn.execute(test_query, (test_code,)).fetchone()
     conn.close()
@@ -332,7 +416,7 @@ def get_test_data(test_code):
         }
         return jsonify(test_data)
     else:
-        return jsonify({'error': 'Test not found'}), 404
+        return jsonify({'error': 'Test not found or not started by the admin.'}), 404
 
 
 @app.route('/get-proctoring-logs', methods=['GET'])
@@ -569,32 +653,190 @@ def get_user_test_details():
         "warnings": [dict(w) for w in warnings]
     }), 200
 
+import subprocess
+import tempfile
+
+def execute_code(language, code, stdin):
+    with tempfile.TemporaryDirectory() as temp_dir:
+        if language == "python":
+            script_path = os.path.join(temp_dir, "script.py")
+            with open(script_path, "w") as f:
+                f.write(code)
+            try:
+                proc = subprocess.run(["python", script_path], input=stdin, text=True, capture_output=True, timeout=5)
+                return {"output": proc.stdout, "error": proc.stderr}
+            except subprocess.TimeoutExpired:
+                return {"output": "", "error": "Execution timed out."}
+            except Exception as e:
+                return {"output": "", "error": str(e)}
+                
+        elif language == "c++":
+            cpp_path = os.path.join(temp_dir, "main.cpp")
+            exe_path = os.path.join(temp_dir, "main.exe")
+            with open(cpp_path, "w") as f:
+                f.write(code)
+            try:
+                compile_proc = subprocess.run(["g++", cpp_path, "-o", exe_path], text=True, capture_output=True, timeout=10)
+                if compile_proc.returncode != 0:
+                    return {"output": "", "error": "Compilation Error:\n" + compile_proc.stderr}
+                run_proc = subprocess.run([exe_path], input=stdin, text=True, capture_output=True, timeout=5)
+                return {"output": run_proc.stdout, "error": run_proc.stderr}
+            except subprocess.TimeoutExpired:
+                return {"output": "", "error": "Execution timed out."}
+            except Exception as e:
+                return {"output": "", "error": "Please ensure g++ is installed. " + str(e)}
+
+        elif language == "java":
+            java_path = os.path.join(temp_dir, "Main.java")
+            with open(java_path, "w") as f:
+                f.write(code)
+            try:
+                compile_proc = subprocess.run(["javac", java_path], text=True, capture_output=True, timeout=10)
+                if compile_proc.returncode != 0:
+                    return {"output": "", "error": "Compilation Error:\n" + compile_proc.stderr}
+                run_proc = subprocess.run(["java", "-cp", temp_dir, "Main"], input=stdin, text=True, capture_output=True, timeout=5)
+                return {"output": run_proc.stdout, "error": run_proc.stderr}
+            except subprocess.TimeoutExpired:
+                return {"output": "", "error": "Execution timed out."}
+            except Exception as e:
+                return {"output": "", "error": "Please ensure Java SDK is installed. " + str(e)}
+                
+    return {"output": "", "error": "Unsupported language."}
+
+@app.route('/fetch-leetcode', methods=['POST'])
+def fetch_leetcode():
+    data = request.json
+    slug = data.get('slug')
+    if not slug:
+        return jsonify({"error": "No slug provided"}), 400
+    
+    url = "https://leetcode.com/graphql"
+    query = """
+    query questionData($titleSlug: String!) {
+        question(titleSlug: $titleSlug) {
+            title
+            content
+            exampleTestcases
+        }
+    }
+    """
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+            "Content-Type": "application/json"
+        }
+        response = requests.post(url, json={"query": query, "variables": {"titleSlug": slug}}, headers=headers)
+        result = response.json()
+        question = result.get('data', {}).get('question')
+        if not question:
+            return jsonify({"error": "Problem not found"}), 404
+        
+        # LeetCode content is HTML, we can return it directly or try to strip it a bit in the frontend
+        return jsonify({
+            "title": question.get('title'),
+            "content": question.get('content'),
+            "sample_input": question.get('exampleTestcases', '')
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/create-coding-test', methods=['POST'])
+def create_coding_test():
+    data = request.json
+    try:
+        conn = get_db_connection()
+        conn.execute('''
+            INSERT INTO coding_tests (test_code, title, problem_statement, sample_input, sample_output, test_cases, timer)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (data['testCode'], data['title'], data['problemStatement'], data['sampleInput'], data['sampleOutput'], json.dumps(data['testCases']), int(data['timer'])))
+        conn.commit()
+        conn.close()
+        return jsonify({"message": "Coding test created successfully"}), 201
+    except sqlite3.IntegrityError:
+        return jsonify({"message": "Test code already exists."}), 400
+    except Exception as e:
+        return jsonify({"message": "Error creating coding test", "error": str(e)}), 500
+
+@app.route('/get-coding-test', methods=['GET'])
+def get_coding_test():
+    test_code = request.args.get('testCode')
+    conn = get_db_connection()
+    test = conn.execute('SELECT * FROM coding_tests WHERE test_code = ? AND is_test_started = 1', (test_code,)).fetchone()
+    conn.close()
+    if test:
+        return jsonify({
+            "title": test['title'],
+            "problem_statement": test['problem_statement'],
+            "sample_input": test['sample_input'],
+            "sample_output": test['sample_output'],
+            "timer": test['timer']
+        }), 200
+    return jsonify({"message": "Test not found or not started."}), 404
+
+@app.route('/run-code', methods=['POST'])
+def run_code():
+    data = request.json
+    result = execute_code(data['language'], data['code'], data.get('stdin', ''))
+    return jsonify(result)
+
+@app.route('/submit-coding-test', methods=['POST'])
+def submit_coding_test():
+    data = request.json
+    test_code = data['test_id']
+    username = data['username']
+    language = data['language']
+    code = data['code']
+    session_login = data.get('session_login', '')
+    ip_address = request.remote_addr
+
+    conn = get_db_connection()
+    test = conn.execute('SELECT * FROM coding_tests WHERE test_code = ?', (test_code,)).fetchone()
+    if not test:
+        conn.close()
+        return jsonify({"message": "Test not found"}), 404
+
+    test_cases = json.loads(test['test_cases'])
+    passed = 0
+    total = len(test_cases)
+    
+    for tc in test_cases:
+        result = execute_code(language, code, tc['input'])
+        if result['output'].strip() == tc['output'].strip():
+            passed += 1
+
+    conn.execute('''
+        INSERT INTO user_coding_sessions (username, test_id, code, language, score, total, ip_address, session_login)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (username, test_code, code, language, passed, total, ip_address, session_login))
+    conn.commit()
+    conn.close()
+    
+    return jsonify({"score": passed, "total": total}), 200
+
 @app.route('/get-user-sessions', methods=['GET'])
 def get_user_sessions():
     conn = get_db_connection()
-    
-    # Fetch data from user_test_sessions
-    sessions_query = '''
-        SELECT username, test_id, ip_address, session_login, score, total
-        FROM user_test_sessions
-    '''
-    sessions = conn.execute(sessions_query).fetchall()
+    sessions = conn.execute('SELECT username, test_id, ip_address, session_login, score, total, timestamp FROM user_test_sessions ORDER BY COALESCE(timestamp, session_login) DESC').fetchall()
     conn.close()
-    
-    # Convert sessions to a list of dictionaries
-    sessions_data = []
-    for session in sessions:
-        sessions_data.append({
-            'username': session['username'],
-            'test_id': session['test_id'],
-            'ip_address': session['ip_address'],
-            'session_login': session['session_login'],
-            'score': session['score'],
-            'total': session['total']
-        })
-    
-    # Return the data as a JSON response
-    return jsonify(sessions_data), 200
+    return jsonify([dict(s) for s in sessions]), 200
+
+@app.route('/get-all-user-sessions', methods=['GET'])
+def get_all_user_sessions():
+    conn = get_db_connection()
+    # MCQ sessions — use COALESCE so older rows without timestamp still sort correctly
+    query = '''
+        SELECT username, test_id, ip_address, session_login, score, total,
+               COALESCE(timestamp, session_login) as timestamp, 'MCQ' as test_type
+        FROM user_test_sessions
+        UNION ALL
+        SELECT username, test_id, ip_address, session_login, score, total,
+               timestamp, 'Coding' as test_type
+        FROM user_coding_sessions
+        ORDER BY timestamp DESC
+    '''
+    sessions = conn.execute(query).fetchall()
+    conn.close()
+    return jsonify([dict(s) for s in sessions]), 200
 
 # Reset test (update questions and timer)
 @app.route('/reset-test', methods=['POST'])

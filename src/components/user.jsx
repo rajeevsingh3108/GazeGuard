@@ -13,6 +13,10 @@ const User = () => {
     navigate('/user_test', { state: { username } });
   };
 
+  const startCodingTest = () => {
+    navigate('/user-coding-test', { state: { username } });
+  };
+
   const location = useLocation();
   const username = location.state?.username;
 
@@ -94,21 +98,37 @@ const User = () => {
               Please ensure a stable network connection and follow all proctoring guidelines carefully.
             </p>
 
-            {/* Start Exam Button */}
-            <button
-              className="px-14 py-4 
-                         bg-blue-600 text-white 
-                         rounded-full 
-                         font-Orbitron text-xl tracking-wide 
-                         shadow-lg 
-                         hover:bg-blue-700 
-                         hover:shadow-xl 
-                         active:scale-95
-                         transition-all duration-300"
-              onClick={startTest}
-            >
-              Start Exam
-            </button>
+            <div className="flex flex-col md:flex-row gap-4 w-full justify-center">
+              <button
+                className="px-10 py-4 
+                           bg-blue-600 text-white 
+                           rounded-full 
+                           font-Orbitron text-xl tracking-wide 
+                           shadow-lg 
+                           hover:bg-blue-700 
+                           hover:shadow-xl 
+                           active:scale-95
+                           transition-all duration-300 w-full md:w-auto"
+                onClick={startTest}
+              >
+                Start MCQ Exam
+              </button>
+
+              <button
+                className="px-10 py-4 
+                           bg-indigo-600 text-white 
+                           rounded-full 
+                           font-Orbitron text-xl tracking-wide 
+                           shadow-lg 
+                           hover:bg-indigo-700 
+                           hover:shadow-xl 
+                           active:scale-95
+                           transition-all duration-300 w-full md:w-auto"
+                onClick={startCodingTest}
+              >
+                Start Coding Exam
+              </button>
+            </div>
           </div>
 
         </main>
