@@ -11,24 +11,17 @@ const Login_user = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-
     try {
       const response = await fetch('http://localhost:5000/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, expected_role: 'user' }),
       });
-
       const data = await response.json();
       if (response.ok) {
-        // Handle successful login (e.g., redirect)
-        console.log(data.message);
-        // Redirect using the URL provided in the response
         navigate(data.redirect, { state: { username } });
       } else {
-        setError(data.message);
+        setError(data.message || 'Login failed.');
       }
     } catch (error) {
       console.error('Error:', error);

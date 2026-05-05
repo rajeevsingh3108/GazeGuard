@@ -98,18 +98,33 @@ const Admin = () => {
             Click below to create your exam.
           </p>
 
-          <button
-            onClick={openModal}
-            className="
-              mt-6 px-12 py-4 
-              bg-blue-600 text-white 
-              font-Orbitron text-lg 
-              rounded-full shadow-md 
-              hover:bg-blue-700 transition
-            "
-          >
-            Create Test
-          </button>
+          <div className="flex flex-col md:flex-row gap-4 mt-6">
+            <button
+              onClick={openModal}
+              className="
+                px-12 py-4 
+                bg-blue-600 text-white 
+                font-Orbitron text-lg 
+                rounded-full shadow-md 
+                hover:bg-blue-700 transition
+              "
+            >
+              Create MCQ Test
+            </button>
+
+            <button
+              onClick={() => navigate('/admin-coding')}
+              className="
+                px-12 py-4 
+                bg-indigo-600 text-white 
+                font-Orbitron text-lg 
+                rounded-full shadow-md 
+                hover:bg-indigo-700 transition
+              "
+            >
+              Create Coding Test
+            </button>
+          </div>
         </main>
 
         {/* Bottom Navbar (Mobile) */}
