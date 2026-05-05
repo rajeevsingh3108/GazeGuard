@@ -1161,6 +1161,9 @@ const McqTest = () => {
       if (testCode === data.test_code || !data.error) {
         setQuestions(data.questions);
         console.log("here are the questions ---- > ", data.questions);
+        if (data.timer) {
+          setTimer(data.timer * 60);
+        }
         setIsTestStarted(true);
         enterFullscreen();
       } else {
@@ -1316,16 +1319,32 @@ const McqTest = () => {
 
     stopAllCameras();
 
-    await fetch('http://localhost:5000/submit-test', {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        username,
-        test_id: testCode,
-        answers: updated,
-        session_login: sessionLogin
-      }),
-    });
+    try {
+      const response = await fetch('http://localhost:5000/submit-test', {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username,
+          test_id: testCode,
+          answers: updated,
+          session_login: sessionLogin
+        }),
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.total > 0) {
+          alert(`Test Submitted! \nReport: You scored ${result.score} out of ${result.total}.`);
+        } else {
+          alert("Test Submitted!");
+        }
+      } else {
+        alert("Test Submitted, but there was an error fetching your score.");
+      }
+    } catch (error) {
+      alert("Error: Could not reach the server to submit your test. Please ensure the backend is running.");
+      console.error(error);
+    }
 
     try { document.exitFullscreen(); } catch {}
     navigate("/user");

@@ -49,6 +49,8 @@ function FaceOrientationChecker({ username, testCode }) {
       const canvas = canvasRef.current;
       const video = videoRef.current;
 
+      if (!canvas || !video || video.videoWidth === 0) return;
+
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
 

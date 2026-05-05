@@ -99,7 +99,7 @@ const NavbarU = () => {
             Profile
           </div>
 
-          <a href="/admin">
+          <a href="/login_user">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="28" height="28"

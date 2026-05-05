@@ -23,7 +23,7 @@ const User = () => {
   }, [username, navigate]);
 
   const handleLogout = () => {
-    navigate('/login_admin');
+    navigate('/login_user');
   };
 
   return (
